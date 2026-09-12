@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreProposalRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->can('proposal.create') ?? false;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'grant_program_id' => [
+                'required',
+                'uuid',
+                'exists:grant_programs,id',
+            ],
+            'organization_id' => [
+                'required',
+                'uuid',
+                'exists:organizations,id',
+            ],
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'background' => [
+                'nullable',
+                'string',
+            ],
+            'objectives' => [
+                'nullable',
+                'string',
+            ],
+            'benefits' => [
+                'nullable',
+                'string',
+            ],
+            'activities' => [
+                'nullable',
+                'string',
+            ],
+            'outputs' => [
+                'nullable',
+                'string',
+            ],
+        ];
+    }
+}
