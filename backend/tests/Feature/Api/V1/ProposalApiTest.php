@@ -125,6 +125,75 @@ class ProposalApiTest extends TestCase
             ->getJson("/api/v1/proposals/{$proposal->id}")
             ->assertForbidden();
     }
+
+    public function test_pemohon_only_sees_own_proposals(): void
+    {
+        $userA = User::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $userB = User::factory()->create([
+            'is_active' => true,
+        ]);
+
+        $role = Role::where('code', 'PEMOHON')->firstOrFail();
+
+        $userA->roles()->attach($role->id);
+        $userB->roles()->attach($role->id);
+
+        $program = GrantProgram::query()->create([
+            'code' => 'TEST-PROGRAM-' . uniqid(),
+            'name' => 'Program Test',
+            'fiscal_year' => now()->year,
+            'status' => 'active',
+            'is_active' => true,
+        ]);
+
+        $organization = Organization::query()->create([
+            'code' => 'TEST-ORG-' . uniqid(),
+            'name' => 'Organisasi Test',
+            'organization_type' => 'organization',
+            'is_active' => true,
+            'created_by' => $userA->id,
+            'updated_by' => $userA->id,
+        ]);
+
+        Proposal::query()->create([
+            'proposal_number' => 'TEST-A-' . uniqid(),
+            'grant_program_id' => $program->id,
+            'organization_id' => $organization->id,
+            'applicant_id' => $userA->id,
+            'title' => 'Proposal User A',
+            'requested_amount' => 10000000,
+            'status' => \App\Enums\ProposalStatus::DRAFT,
+            'revision_count' => 0,
+            'created_by' => $userA->id,
+            'updated_by' => $userA->id,
+        ]);
+
+        Proposal::query()->create([
+            'proposal_number' => 'TEST-B-' . uniqid(),
+            'grant_program_id' => $program->id,
+            'organization_id' => $organization->id,
+            'applicant_id' => $userB->id,
+            'title' => 'Proposal User B',
+            'requested_amount' => 15000000,
+            'status' => \App\Enums\ProposalStatus::DRAFT,
+            'revision_count' => 0,
+            'created_by' => $userB->id,
+            'updated_by' => $userB->id,
+        ]);
+
+        $token = $userA->createToken('phpunit')->plainTextToken;
+
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/proposals');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Proposal User A');
+    }
 }
 
 ?>
