@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+
+use App\Models\Proposal;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProposalRequest extends FormRequest
@@ -45,7 +47,7 @@ class StoreProposalRequest extends FormRequest
                 'nullable',
                 'string',
             ],
-            'outputs' => [
+            'expected_outputs' => [
                 'nullable',
                 'string',
             ],

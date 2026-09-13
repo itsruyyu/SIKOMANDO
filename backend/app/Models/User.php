@@ -70,12 +70,10 @@ class User extends Authenticatable
     /**
      * Check whether the user has one or more roles.
      */
-    public function hasRole(string|array $roles): bool
+    public function hasRole(string $role): bool
     {
-        $roles = is_array($roles) ? $roles : [$roles];
-
         return $this->roles()
-            ->whereIn('code', $roles)
+            ->where('code', $role)
             ->exists();
     }
 

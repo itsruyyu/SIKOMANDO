@@ -7,7 +7,6 @@ use App\Http\Requests\Api\V1\StoreProposalApiRequest;
 use App\Http\Resources\Api\V1\ProposalResource;
 use App\Models\Proposal;
 use App\Services\ProposalService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProposalController extends Controller
@@ -30,22 +29,15 @@ class ProposalController extends Controller
             ->latest();
 
         if ($request->user()->hasRole('PEMOHON')) {
-            $query->where('applicant_id', $request->user()->id);
-        }
-
-        if ($request->filled('status')) {
             $query->where(
-                'status',
-                $request->string('status')->toString()
+                'applicant_id',
+                $request->user()->id
             );
         }
 
-        $perPage = min(
-            max($request->integer('per_page', 15), 1),
-            100
+        $proposals = $query->paginate(
+            $request->integer('per_page', 15)
         );
-
-        $proposals = $query->paginate($perPage);
 
         return ProposalResource::collection($proposals);
     }
@@ -68,8 +60,9 @@ class ProposalController extends Controller
         return new ProposalResource($proposal);
     }
 
-    public function show(Proposal $proposal): ProposalResource
-    {
+    public function show(
+        Proposal $proposal
+    ): ProposalResource {
         $this->authorize('view', $proposal);
 
         return new ProposalResource(

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,7 +15,7 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = \App\Models\User::query()
+        $user = User::query()
             ->where('email', $request->string('email')->toString())
             ->where('is_active', true)
             ->first();
@@ -68,24 +69,25 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
-                'roles' => $user->roles->pluck('code')->values(),
+                'roles' => $user->roles
+                    ->pluck('code')
+                    ->values(),
             ],
         ]);
     }
 
-public function logout(Request $request): JsonResponse
-{
-    $user = $request->user();
+    public function logout(Request $request): JsonResponse
+    {
+        $token = $request->user()?->currentAccessToken();
 
-    $token = $user?->currentAccessToken();
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
 
-    if ($token instanceof PersonalAccessToken) {
-        $token->delete();
+        return response()->json([
+            'success' => true,
+            'message' => 'Logout berhasil.',
+            'data' => null,
+        ]);
     }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Logout berhasil.',
-    ]);
-}
 }
