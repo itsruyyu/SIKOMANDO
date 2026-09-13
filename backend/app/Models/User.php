@@ -54,6 +54,9 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Get the roles assigned to the user.
+     */
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -82,20 +85,6 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            Permission::class,
-            'role_permission',
-            'role_id',
-            'permission_id'
-        )->whereHas('roles', function ($query) {
-            $query->whereHas('users', function ($userQuery) {
-                $userQuery->where('users.id', $this->id);
-            });
-        });
-    }
-
     /**
      * Check whether the user has one or more permissions.
      *
@@ -111,8 +100,10 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->permissions()
-            ->whereIn('code', $permissions)
+        return $this->roles()
+            ->whereHas('permissions', function ($query) use ($permissions) {
+                $query->whereIn('code', $permissions);
+            })
             ->exists();
     }
 
@@ -122,6 +113,9 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Get the organizations associated with the user.
+     */
     public function organizations()
     {
         return $this->belongsToMany(
@@ -145,13 +139,27 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Get grant programs created by the user.
+     */
     public function createdGrantPrograms()
     {
-        return $this->hasMany(GrantProgram::class, 'created_by');
+        return $this->hasMany(
+            GrantProgram::class,
+            'created_by'
+        );
     }
 
+    /**
+     * Get grant programs updated by the user.
+     */
     public function updatedGrantPrograms()
     {
-        return $this->hasMany(GrantProgram::class, 'updated_by');
+        return $this->hasMany(
+            GrantProgram::class,
+            'updated_by'
+        );
     }
 }
+
+?>

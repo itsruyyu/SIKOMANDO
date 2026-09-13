@@ -20,7 +20,7 @@ class ProposalResource extends JsonResource
             'objectives' => $this->objectives,
             'benefits' => $this->benefits,
             'activities' => $this->activities,
-            'outputs' => $this->outputs,
+            'expected_outputs' => $this->expected_outputs,
             'requested_amount' => $this->requested_amount,
             'approved_amount' => $this->approved_amount,
             'status' => $this->status?->value ?? $this->status,

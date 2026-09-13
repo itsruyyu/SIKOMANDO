@@ -9,7 +9,7 @@ class ProposalPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('proposal.view');
+        return $user->hasPermission('proposal.viewAny');
     }
 
     public function view(User $user, Proposal $proposal): bool
@@ -18,11 +18,11 @@ class ProposalPolicy
             return true;
         }
 
-        if ($user->hasPermission('proposal.view')) {
-            return true;
+        if ($user->hasRole('PEMOHON')) {
+            return $proposal->applicant_id === $user->id;
         }
 
-        return $proposal->applicant_id === $user->id;
+        return $user->hasPermission('proposal.view');
     }
 
     public function create(User $user): bool

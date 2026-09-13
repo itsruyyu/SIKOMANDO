@@ -11,6 +11,7 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
+            'proposal.viewAny',
             'proposal.view',
             'proposal.create',
             'proposal.update',
@@ -106,6 +107,7 @@ class RolePermissionSeeder extends Seeder
             'SUPER_ADMIN' => $permissions,
 
             'ADMIN_SIKOMANDO' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'proposal.verify',
                 'proposal.monitor',
@@ -116,6 +118,7 @@ class RolePermissionSeeder extends Seeder
             ],
 
             'PEMOHON' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'proposal.create',
                 'proposal.update',
@@ -123,22 +126,26 @@ class RolePermissionSeeder extends Seeder
             ],
 
             'VERIFIKATOR' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'proposal.verify',
                 'proposal.reject',
             ],
 
             'EVALUATOR' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'proposal.evaluate',
             ],
 
             'SURVEYOR' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'proposal.survey',
             ],
 
             'APPROVER' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'proposal.recommend',
                 'proposal.approve',
@@ -146,6 +153,7 @@ class RolePermissionSeeder extends Seeder
             ],
 
             'AUDITOR' => [
+                'proposal.viewAny',
                 'proposal.view',
                 'audit.view',
                 'report.view',

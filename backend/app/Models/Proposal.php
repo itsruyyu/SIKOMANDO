@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\ProposalStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Proposal extends Model
 {
     use HasUuid;
+    use HasFactory;
     use SoftDeletes;
 
     protected $fillable = [
@@ -24,7 +26,7 @@ class Proposal extends Model
         'objectives',
         'benefits',
         'activities',
-        'outputs',
+        'expected_outputs',
         'requested_amount',
         'approved_amount',
         'status',

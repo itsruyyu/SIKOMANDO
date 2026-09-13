@@ -7,8 +7,8 @@ use App\Http\Requests\Api\V1\StoreProposalApiRequest;
 use App\Http\Resources\Api\V1\ProposalResource;
 use App\Models\Proposal;
 use App\Services\ProposalService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class ProposalController extends Controller
 {
@@ -33,9 +33,19 @@ class ProposalController extends Controller
             $query->where('applicant_id', $request->user()->id);
         }
 
-        $proposals = $query->paginate(
-            $request->integer('per_page', 15)
+        if ($request->filled('status')) {
+            $query->where(
+                'status',
+                $request->string('status')->toString()
+            );
+        }
+
+        $perPage = min(
+            max($request->integer('per_page', 15), 1),
+            100
         );
+
+        $proposals = $query->paginate($perPage);
 
         return ProposalResource::collection($proposals);
     }
@@ -52,7 +62,7 @@ class ProposalController extends Controller
             'objectives' => $request->validated('objectives'),
             'benefits' => $request->validated('benefits'),
             'activities' => $request->validated('activities'),
-            'outputs' => $request->validated('outputs'),
+            'expected_outputs' => $request->validated('expected_outputs'),
         ]);
 
         return new ProposalResource($proposal);
