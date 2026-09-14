@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Proposal;
 use App\Models\User;
+use App\Enums\ProposalStatus;
 
 class ProposalPolicy
 {
@@ -48,6 +49,14 @@ class ProposalPolicy
 
     public function submit(User $user, Proposal $proposal): bool
     {
+        if ($user->hasRole('SUPER_ADMIN')) {
+            return true;
+        }
+
+        if (! $user->hasRole('PEMOHON')) {
+            return false;
+        }
+
         if (! $user->hasPermission('proposal.submit')) {
             return false;
         }

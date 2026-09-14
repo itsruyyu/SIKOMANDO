@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\GrantProgramController;
 use App\Http\Controllers\Api\V1\ProposalController;
+use App\Http\Controllers\Api\V1\RevisionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -42,9 +43,34 @@ Route::prefix('v1')->group(function () {
             'store',
         ]);
 
+        Route::post('/proposals/{proposal}/submit', [
+            ProposalController::class,
+            'submit',
+        ]);
+
         Route::get('/proposals/{proposal}', [
             ProposalController::class,
             'show',
+        ]);
+
+        Route::get('/proposals/{proposal}/revisions', [
+            RevisionController::class,
+            'index',
+        ]);
+
+        Route::post('/proposals/{proposal}/revisions', [
+            RevisionController::class,
+            'store',
+        ]);
+
+        Route::get('/proposals/{proposal}/revisions/{revision}', [
+            RevisionController::class,
+            'show',
+        ]);
+
+        Route::post('/proposals/{proposal}/revisions/{revision}/submit', [
+            RevisionController::class,
+            'submit',
         ]);
     });
 });

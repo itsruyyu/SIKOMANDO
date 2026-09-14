@@ -122,4 +122,30 @@ class ProposalController extends Controller
                 'message' => 'Detail proposal berhasil diambil.',
             ]);
     }
+    
+    public function submit(
+        Request $request,
+        Proposal $proposal
+    ): ProposalResource {
+        $this->authorize('submit', $proposal);
+
+        $submittedProposal = $this->proposalService->submit(
+            proposal: $proposal,
+            actorId: $request->user()->id,
+            requestId: $request->header('X-Request-ID'),
+        );
+
+        return (new ProposalResource(
+            $submittedProposal->load([
+                'grantProgram',
+                'organization',
+                'applicant',
+                'budgetItems',
+                'documents',
+            ])
+        ))->additional([
+            'success' => true,
+            'message' => 'Proposal berhasil diajukan.',
+        ]);
+    }
 }

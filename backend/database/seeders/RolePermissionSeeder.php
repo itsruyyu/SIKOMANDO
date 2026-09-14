@@ -31,6 +31,9 @@ class RolePermissionSeeder extends Seeder
             'audit.view',
             'report.view',
             'public-data.manage',
+            'proposal.revision.create',
+            'proposal.revision.view',
+            'proposal.revision.submit',
         ];
 
         foreach ($permissions as $code) {
@@ -123,6 +126,9 @@ class RolePermissionSeeder extends Seeder
                 'proposal.create',
                 'proposal.update',
                 'proposal.submit',
+                'proposal.revision.create',
+                'proposal.revision.view',
+                'proposal.revision.submit',
             ],
 
             'VERIFIKATOR' => [
@@ -130,18 +136,27 @@ class RolePermissionSeeder extends Seeder
                 'proposal.view',
                 'proposal.verify',
                 'proposal.reject',
+                'proposal.revision.create',
+                'proposal.revision.view',
+                'proposal.revision.submit',
             ],
 
             'EVALUATOR' => [
                 'proposal.viewAny',
                 'proposal.view',
                 'proposal.evaluate',
+                'proposal.revision.create',
+                'proposal.revision.view',
+                'proposal.revision.submit',
             ],
 
             'SURVEYOR' => [
                 'proposal.viewAny',
                 'proposal.view',
                 'proposal.survey',
+                'proposal.revision.create',
+                'proposal.revision.view',
+                'proposal.revision.submit',
             ],
 
             'APPROVER' => [
