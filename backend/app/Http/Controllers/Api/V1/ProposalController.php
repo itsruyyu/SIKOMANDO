@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreProposalApiRequest;
 use App\Http\Resources\Api\V1\ProposalResource;
+use App\Models\GrantProgram;
+use App\Models\Organization;
 use App\Models\Proposal;
 use App\Services\ProposalService;
 use Illuminate\Http\Request;
@@ -35,29 +37,70 @@ class ProposalController extends Controller
             );
         }
 
-        $proposals = $query->paginate(
-            $request->integer('per_page', 15)
+        if ($request->filled('status')) {
+            $query->where(
+                'status',
+                $request->string('status')->toString()
+            );
+        }
+
+        $perPage = min(
+            max($request->integer('per_page', 15), 1),
+            100
         );
 
-        return ProposalResource::collection($proposals);
+        $proposals = $query
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return ProposalResource::collection($proposals)
+            ->additional([
+                'success' => true,
+                'message' => 'Daftar proposal berhasil diambil.',
+            ]);
     }
 
     public function store(
         StoreProposalApiRequest $request
     ): ProposalResource {
-        $proposal = $this->proposalService->create([
-            'grant_program_id' => $request->validated('grant_program_id'),
-            'organization_id' => $request->validated('organization_id'),
-            'applicant_id' => $request->user()->id,
-            'title' => $request->validated('title'),
-            'background' => $request->validated('background'),
-            'objectives' => $request->validated('objectives'),
-            'benefits' => $request->validated('benefits'),
-            'activities' => $request->validated('activities'),
-            'expected_outputs' => $request->validated('expected_outputs'),
+        $validated = $request->validated();
+
+        $program = GrantProgram::query()
+            ->findOrFail($validated['grant_program_id']);
+
+        $organization = Organization::query()
+            ->findOrFail($validated['organization_id']);
+
+        $proposal = $this->proposalService->create(
+            program: $program,
+            organization: $organization,
+            applicantId: $request->user()->id,
+            data: [
+                'title' => $validated['title'],
+                'background' => $validated['background'] ?? null,
+                'objectives' => $validated['objectives'] ?? null,
+                'benefits' => $validated['benefits'] ?? null,
+                'activities' => $validated['activities'] ?? null,
+                'outputs' => $validated['outputs']
+                    ?? $validated['expected_outputs']
+                    ?? null,
+            ],
+            requestId: $request->header('X-Request-ID'),
+        );
+
+        $proposal->load([
+            'grantProgram',
+            'organization',
+            'applicant',
+            'budgetItems',
+            'documents',
         ]);
 
-        return new ProposalResource($proposal);
+        return (new ProposalResource($proposal))
+            ->additional([
+                'success' => true,
+                'message' => 'Proposal berhasil dibuat.',
+            ]);
     }
 
     public function show(
@@ -65,14 +108,18 @@ class ProposalController extends Controller
     ): ProposalResource {
         $this->authorize('view', $proposal);
 
-        return new ProposalResource(
-            $proposal->load([
-                'grantProgram',
-                'organization',
-                'applicant',
-                'budgetItems',
-                'documents',
-            ])
-        );
+        $proposal->load([
+            'grantProgram',
+            'organization',
+            'applicant',
+            'budgetItems',
+            'documents',
+        ]);
+
+        return (new ProposalResource($proposal))
+            ->additional([
+                'success' => true,
+                'message' => 'Detail proposal berhasil diambil.',
+            ]);
     }
 }
