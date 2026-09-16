@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\ProposalStatus;
 use App\Models\Proposal;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -23,7 +24,7 @@ class ProposalFactory extends Factory
 
             'organization_id' => null,
 
-            'applicant_id' => null,
+            'applicant_id' => User::factory(),
 
             'title' => fake()->sentence(6),
 

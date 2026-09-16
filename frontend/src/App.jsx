@@ -1,17 +1,76 @@
-function App() {
-  return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="rounded-xl bg-white p-8 shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-900">
-          SIKOMANDO
-        </h1>
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from 'react-router-dom';
 
-        <p className="mt-2 text-gray-600">
-          Sistem Informasi Komprehensif Manajemen Digitalisasi Hibah Organisasi
-        </p>
-      </div>
-    </div>
-  )
+import { AuthProvider } from './context/AuthContext.jsx';
+import ProtectedRoute from './routes/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import OrganizationsPage from './pages/OrganizationsPage';
+import OrganizationDetailPage from './pages/OrganizationDetailPage';
+import ProposalsPage from './pages/ProposalsPage';
+import ProposalCreatePage from './pages/ProposalCreatePage';
+import ProposalDetailPage from './pages/ProposalDetailPage';
+import AppShell from './components/layout/AppShell';
+
+function ProtectedLayout() {
+  return (
+    <ProtectedRoute>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </ProtectedRoute>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+
+            <Route
+              path="/organizations"
+              element={<OrganizationsPage />}
+            />
+
+            <Route
+              path="/organizations/:id"
+              element={<OrganizationDetailPage />}
+            />
+
+            <Route path="/proposals" element={<ProposalsPage />} />
+
+            <Route
+              path="/proposals/create"
+              element={<ProposalCreatePage />}
+            />
+
+            <Route
+              path="/proposals/:id"
+              element={<ProposalDetailPage />}
+            />
+          </Route>
+
+          <Route
+            path="/"
+            element={<Navigate to="/dashboard" replace />}
+          />
+
+          <Route
+            path="*"
+            element={<Navigate to="/dashboard" replace />}
+          />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}

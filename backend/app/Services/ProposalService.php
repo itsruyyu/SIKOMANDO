@@ -15,8 +15,8 @@ class ProposalService
     public function __construct(
         private readonly ProposalWorkflowService $workflow,
         private readonly AuditLogService $auditLog,
-    ) {
-    }
+        private readonly NotificationService $notificationService,
+    ) {}
 
     public function create(
         GrantProgram $program,
@@ -91,17 +91,43 @@ class ProposalService
             'organization',
             'budgetItems',
             'documents',
+            'applicant',
         ]);
 
         $this->validateBeforeSubmit($proposal);
 
-        return $this->workflow->transition(
+        $submittedProposal = $this->workflow->transition(
             proposal: $proposal,
             targetStatus: ProposalStatus::SUBMITTED,
             actorId: $actorId,
             reason: 'Proposal diajukan oleh pemohon.',
             requestId: $requestId,
         );
+
+        $this->notificationService->create(
+            recipient: $proposal->applicant,
+            type: 'proposal.submitted',
+            title: 'Proposal berhasil diajukan',
+            message: sprintf(
+                'Proposal "%s" dengan nomor %s berhasil diajukan.',
+                $submittedProposal->title,
+                $submittedProposal->proposal_number,
+            ),
+            entityType: Proposal::class,
+            entityId: $submittedProposal->id,
+            data: [
+                'proposal_number' => $submittedProposal->proposal_number,
+                'status' => ProposalStatus::SUBMITTED->value,
+            ],
+            requestId: $requestId,
+        );
+
+        return $submittedProposal->fresh([
+            'grantProgram',
+            'organization',
+            'budgetItems',
+            'documents',
+        ]);
     }
 
     private function validateBeforeSubmit(Proposal $proposal): void
@@ -132,10 +158,10 @@ class ProposalService
     private function generateProposalNumber(GrantProgram $program): string
     {
         $year = $program->fiscal_year ?: now()->year;
-        $prefix = 'PROP-' . $year . '-';
+        $prefix = 'PROP-'.$year.'-';
 
         do {
-            $number = $prefix . strtoupper(Str::random(8));
+            $number = $prefix.strtoupper(Str::random(8));
         } while (Proposal::where('proposal_number', $number)->exists());
 
         return $number;

@@ -2,19 +2,18 @@
 
 namespace App\Models;
 
+use App\Enums\ProposalStatus;
 use App\Models\Concerns\HasUuid;
-use App\Models\Revision;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Enums\ProposalStatus;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Proposal extends Model
 {
-    use HasUuid;
     use HasFactory;
+    use HasUuid;
     use SoftDeletes;
 
     protected $fillable = [
@@ -109,5 +108,4 @@ class Proposal extends Model
     {
         return $this->hasMany(Evaluation::class);
     }
-
 }

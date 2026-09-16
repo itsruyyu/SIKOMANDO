@@ -14,8 +14,8 @@ class RevisionService
     public function __construct(
         private readonly ProposalWorkflowService $workflowService,
         private readonly AuditLogService $auditLogService,
-    ) {
-    }
+        private readonly NotificationService $notificationService,
+    ) {}
 
     public function create(
         Proposal $proposal,
@@ -186,6 +186,27 @@ class RevisionService
                 newValues: [
                     'proposal_id' => $proposal->id,
                     'revision_id' => $revision->id,
+                    'status' => 'submitted',
+                ],
+                requestId: $requestId,
+            );
+
+            $this->notificationService->create(
+                recipient: $actor,
+                type: 'revision.submitted',
+                title: 'Revisi berhasil diajukan',
+                message: sprintf(
+                    'Revisi proposal "%s" dengan nomor %s berhasil diajukan kembali.',
+                    $proposal->title,
+                    $proposal->proposal_number,
+                ),
+                entityType: Revision::class,
+                entityId: $revision->id,
+                data: [
+                    'proposal_id' => $proposal->id,
+                    'proposal_number' => $proposal->proposal_number,
+                    'revision_id' => $revision->id,
+                    'revision_number' => $revision->revision_number,
                     'status' => 'submitted',
                 ],
                 requestId: $requestId,

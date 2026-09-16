@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\VerificationResult;
+use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +28,8 @@ class Verification extends Model
     protected function casts(): array
     {
         return [
+            'status' => VerificationStatus::class,
+            'result' => VerificationResult::class,
             'started_at' => 'immutable_datetime',
             'completed_at' => 'immutable_datetime',
         ];

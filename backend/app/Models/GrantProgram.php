@@ -3,15 +3,16 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class GrantProgram extends Model
 {
-    use HasUuid;
     use HasFactory;
+    use HasUuid;
 
     protected $fillable = [
         'code',
@@ -59,6 +60,26 @@ class GrantProgram extends Model
     public function documentRequirements(): HasMany
     {
         return $this->hasMany(DocumentRequirement::class);
+    }
+
+    public function requirements(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Requirement::class,
+            'document_requirements',
+            'grant_program_id',
+            'requirement_id'
+        )->using(DocumentRequirement::class)
+            ->withPivot([
+                'id',
+                'document_type_id',
+                'scope',
+                'is_mandatory',
+                'maximum_files',
+                'validation_rules',
+                'sort_order',
+                'is_active',
+            ])->withTimestamps();
     }
 
     public function evaluationWeightConfigurations(): HasMany

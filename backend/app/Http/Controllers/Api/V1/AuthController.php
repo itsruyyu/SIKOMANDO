@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
+use App\Http\Resources\UserResource;
+use App\Http\Responses\ApiResponse;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +15,12 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    /**
+     * Authenticate a user and create a personal access token.
+     *
+     *
+     * @throws ValidationException
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::query()
@@ -42,40 +50,33 @@ class AuthController extends Controller
             'last_login_at' => now(),
         ])->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login berhasil.',
-            'data' => [
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                ],
+        return ApiResponse::success([
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
             ],
-        ]);
+        ], 'Login berhasil.');
     }
 
+    /**
+     * Get the authenticated user profile.
+     */
     public function me(Request $request): JsonResponse
     {
         $user = $request->user()->load('roles');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Profil pengguna berhasil diambil.',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'roles' => $user->roles
-                    ->pluck('code')
-                    ->values(),
-            ],
-        ]);
+        return ApiResponse::success(
+            new UserResource($user),
+            'Profil pengguna berhasil diambil.'
+        );
     }
 
+    /**
+     * Invalidate the current personal access token.
+     */
     public function logout(Request $request): JsonResponse
     {
         $token = $request->user()?->currentAccessToken();
@@ -84,10 +85,6 @@ class AuthController extends Controller
             $token->delete();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Logout berhasil.',
-            'data' => null,
-        ]);
+        return ApiResponse::success(null, 'Logout berhasil.');
     }
 }

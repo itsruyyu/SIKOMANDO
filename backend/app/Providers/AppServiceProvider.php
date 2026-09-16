@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\Proposal;
 use App\Models\User;
+use App\Models\Verification;
 use App\Policies\ProposalPolicy;
+use App\Policies\VerificationPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -29,9 +31,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)->by(
                 strtolower($request->input('email', 'guest'))
-                . '|'
-                . $request->ip()
+                .'|'
+                .$request->ip()
             );
         });
+
+        Gate::policy(Verification::class, VerificationPolicy::class);
     }
 }

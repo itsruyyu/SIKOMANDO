@@ -9,20 +9,22 @@ use App\Http\Resources\Api\V1\RevisionResource;
 use App\Models\Proposal;
 use App\Models\Revision;
 use App\Services\RevisionService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class RevisionController extends Controller
 {
     public function __construct(
         private readonly RevisionService $revisionService
-    ) {
-    }
+    ) {}
 
+    /**
+     * Display a listing of revisions for a proposal.
+     */
     public function index(
         Request $request,
         Proposal $proposal
-    ) {
+    ): AnonymousResourceCollection {
         $this->authorize('view', $proposal);
 
         $revisions = $proposal->revisions()
@@ -43,6 +45,9 @@ class RevisionController extends Controller
             ]);
     }
 
+    /**
+     * Store a newly created revision request for a proposal.
+     */
     public function store(
         StoreRevisionRequest $request,
         Proposal $proposal
@@ -62,6 +67,9 @@ class RevisionController extends Controller
             ]);
     }
 
+    /**
+     * Display the specified revision detail.
+     */
     public function show(
         Request $request,
         Proposal $proposal,
@@ -85,6 +93,9 @@ class RevisionController extends Controller
         ]);
     }
 
+    /**
+     * Submit resolved revision for a proposal.
+     */
     public function submit(
         Request $request,
         Proposal $proposal,

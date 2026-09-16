@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Proposal;
 use App\Models\User;
-use App\Enums\ProposalStatus;
 
 class ProposalPolicy
 {

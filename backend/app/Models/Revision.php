@@ -47,5 +47,4 @@ class Revision extends Model
     {
         return $this->hasMany(RevisionItem::class);
     }
-
 }

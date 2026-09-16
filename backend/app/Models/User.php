@@ -4,17 +4,18 @@ namespace App\Models;
 
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory;
-    use Notifiable;
-    use HasUuid;
     use HasApiTokens;
+    use HasFactory;
+    use HasUuid;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -114,7 +115,7 @@ class User extends Authenticatable
     /**
      * Get the organizations associated with the user.
      */
-    public function organizations()
+    public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(
             Organization::class,
@@ -140,7 +141,7 @@ class User extends Authenticatable
     /**
      * Get grant programs created by the user.
      */
-    public function createdGrantPrograms()
+    public function createdGrantPrograms(): HasMany
     {
         return $this->hasMany(
             GrantProgram::class,
@@ -151,13 +152,16 @@ class User extends Authenticatable
     /**
      * Get grant programs updated by the user.
      */
-    public function updatedGrantPrograms()
+    public function updatedGrantPrograms(): HasMany
     {
         return $this->hasMany(
             GrantProgram::class,
             'updated_by'
         );
     }
-}
 
-?>
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+}

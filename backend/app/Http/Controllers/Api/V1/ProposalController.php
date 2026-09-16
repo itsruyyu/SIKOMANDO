@@ -10,15 +10,18 @@ use App\Models\Organization;
 use App\Models\Proposal;
 use App\Services\ProposalService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProposalController extends Controller
 {
     public function __construct(
         private readonly ProposalService $proposalService
-    ) {
-    }
+    ) {}
 
-    public function index(Request $request)
+    /**
+     * Display a listing of proposals.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Proposal::class);
 
@@ -60,6 +63,9 @@ class ProposalController extends Controller
             ]);
     }
 
+    /**
+     * Store a newly created proposal.
+     */
     public function store(
         StoreProposalApiRequest $request
     ): ProposalResource {
@@ -103,6 +109,9 @@ class ProposalController extends Controller
             ]);
     }
 
+    /**
+     * Display the specified proposal.
+     */
     public function show(
         Proposal $proposal
     ): ProposalResource {
@@ -122,7 +131,10 @@ class ProposalController extends Controller
                 'message' => 'Detail proposal berhasil diambil.',
             ]);
     }
-    
+
+    /**
+     * Submit a proposal for verification.
+     */
     public function submit(
         Request $request,
         Proposal $proposal

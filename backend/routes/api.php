@@ -4,6 +4,9 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\GrantProgramController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\RevisionController;
+use App\Http\Controllers\Api\V1\ActivityController;
+use App\Http\Controllers\Api\V1\VerificationController;
+use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -72,5 +75,46 @@ Route::prefix('v1')->group(function () {
             RevisionController::class,
             'submit',
         ]);
+
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+            Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+            Route::post('/{notification}/read', [NotificationController::class, 'markAsRead']);
+        });
+
+        Route::get('/activities', [
+            ActivityController::class,
+            'index',
+        ]);
+
+        Route::prefix('proposals/{proposal}/verifications')
+        ->scopeBindings()
+        ->group(function () {
+            Route::get('/', [
+                VerificationController::class,
+                'index',
+            ])->name('proposals.verifications.index');
+
+            Route::post('/', [
+                VerificationController::class,
+                'store',
+            ])->name('proposals.verifications.store');
+
+            Route::get('/{verification}', [
+                VerificationController::class,
+                'show',
+            ])->name('proposals.verifications.show');
+
+            Route::patch('/{verification}/items/{item}', [
+                VerificationController::class,
+                'updateItem',
+            ])->name('proposals.verifications.items.update');
+
+            Route::post('/{verification}/complete', [
+                VerificationController::class,
+                'complete',
+            ])->name('proposals.verifications.complete');
+        });      
     });
 });

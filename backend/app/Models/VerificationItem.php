@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VerificationItemResult;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,7 @@ class VerificationItem extends Model
     protected function casts(): array
     {
         return [
+            'result' => VerificationItemResult::class,
             'checked_at' => 'immutable_datetime',
         ];
     }
@@ -32,6 +34,16 @@ class VerificationItem extends Model
     public function verification(): BelongsTo
     {
         return $this->belongsTo(Verification::class);
+    }
+
+    public function requirement(): BelongsTo
+    {
+        return $this->belongsTo(Requirement::class);
+    }
+
+    public function documentType(): BelongsTo
+    {
+        return $this->belongsTo(DocumentType::class);
     }
 
     public function checker(): BelongsTo

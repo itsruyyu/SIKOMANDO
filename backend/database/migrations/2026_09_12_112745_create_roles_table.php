@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name', 150);
             $table->text('description')->nullable();
             $table->boolean('is_system')->default(false);
+            $table->boolean('is_active')->default(true); //
             $table->timestamps();
         });
     }

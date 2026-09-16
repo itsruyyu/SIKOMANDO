@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\GrantProgramResource;
 use App\Models\GrantProgram;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class GrantProgramController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a listing of active grant programs.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
         $query = GrantProgram::query()
             ->where('is_active', true)
@@ -29,7 +33,10 @@ class GrantProgramController extends Controller
         ]);
     }
 
-    public function show(GrantProgram $grantProgram)
+    /**
+     * Display the specified grant program.
+     */
+    public function show(GrantProgram $grantProgram): GrantProgramResource
     {
         abort_unless($grantProgram->is_active, 404);
 

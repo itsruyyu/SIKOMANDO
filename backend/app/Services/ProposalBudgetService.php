@@ -22,8 +22,7 @@ class ProposalBudgetService
         }
 
         $budgetData = array_map(
-            fn (array $item): ProposalBudgetData =>
-                ProposalBudgetData::fromArray($item),
+            fn (array $item): ProposalBudgetData => ProposalBudgetData::fromArray($item),
             $items
         );
 
@@ -102,8 +101,7 @@ class ProposalBudgetService
     {
         return (float) $proposal->budgetItems()
             ->get()
-            ->sum(fn (ProposalBudgetItem $item): float =>
-                (float) $item->quantity * (float) $item->unit_price
+            ->sum(fn (ProposalBudgetItem $item): float => (float) $item->quantity * (float) $item->unit_price
             );
     }
 }

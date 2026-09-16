@@ -15,12 +15,10 @@ class ProposalDocument extends Model
     protected $fillable = [
         'proposal_id',
         'document_type_id',
-        'requirement_id',
-        'document_number',
-        'document_date',
+        'document_requirement_id',
         'original_filename',
         'stored_filename',
-        'disk',
+        'storage_disk',
         'storage_path',
         'mime_type',
         'file_size',
@@ -29,6 +27,7 @@ class ProposalDocument extends Model
         'status',
         'notes',
         'uploaded_by',
+        'uploaded_at',
         'verified_by',
         'verified_at',
     ];
@@ -36,9 +35,9 @@ class ProposalDocument extends Model
     protected function casts(): array
     {
         return [
-            'document_date' => 'immutable_date',
             'file_size' => 'integer',
             'version' => 'integer',
+            'uploaded_at' => 'immutable_datetime',
             'verified_at' => 'immutable_datetime',
             'deleted_at' => 'immutable_datetime',
         ];
@@ -54,9 +53,12 @@ class ProposalDocument extends Model
         return $this->belongsTo(DocumentType::class);
     }
 
-    public function requirement(): BelongsTo
+    public function documentRequirement(): BelongsTo
     {
-        return $this->belongsTo(Requirement::class);
+        return $this->belongsTo(
+            DocumentRequirement::class,
+            'document_requirement_id'
+        );
     }
 
     public function uploader(): BelongsTo
