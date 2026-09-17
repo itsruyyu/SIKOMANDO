@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\RevisionController;
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\VerificationController;
+use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -115,6 +116,25 @@ Route::prefix('v1')->group(function () {
                 VerificationController::class,
                 'complete',
             ])->name('proposals.verifications.complete');
-        });      
+        });  
+        
+        Route::prefix('proposals/{proposal}/evaluations')
+        ->controller(EvaluationController::class)
+        ->group(function () {
+            Route::get('/', 'index')
+                ->name('proposals.evaluations.index');
+
+            Route::post('/', 'store')
+                ->name('proposals.evaluations.store');
+
+            Route::get('/{evaluation}', 'show')
+                ->name('proposals.evaluations.show');
+
+            Route::patch('/{evaluation}/items/{item}', 'updateItem')
+                ->name('proposals.evaluations.items.update');
+
+            Route::post('/{evaluation}/complete', 'complete')
+                ->name('proposals.evaluations.complete');
+        });
     });
 });

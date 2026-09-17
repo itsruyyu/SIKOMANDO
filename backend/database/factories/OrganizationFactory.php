@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Organization>
+ * @extends Factory<Organization>
  */
 class OrganizationFactory extends Factory
 {
@@ -17,7 +18,7 @@ class OrganizationFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'ORG-' . fake()->unique()->numerify('#######'),
+            'code' => 'ORG-'.fake()->unique()->numerify('#######'),
             'name' => fake()->company(),
             'organization_type' => 'Perguruan Tinggi',
 

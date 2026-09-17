@@ -74,10 +74,24 @@ class User extends Authenticatable
     public function hasRole(string $role): bool
     {
         return $this->roles()
-            ->where('code', $role)
+            ->where(function ($query) use ($role) {
+                $query
+                    ->where('code', $role)
+                    ->orWhere('name', $role);
+            })
             ->exists();
     }
 
+    public function hasAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     /*
     |--------------------------------------------------------------------------
     | Permissions

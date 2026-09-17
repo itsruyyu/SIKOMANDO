@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EvaluationItemResult;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,7 @@ class EvaluationItem extends Model
     protected function casts(): array
     {
         return [
+            'result' => EvaluationItemResult::class,
             'weight' => 'decimal:4',
             'score' => 'decimal:4',
             'weighted_score' => 'decimal:4',

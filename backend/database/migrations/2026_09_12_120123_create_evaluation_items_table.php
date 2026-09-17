@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('maximum_score', 12, 4)->nullable();
 
             $table->string('result', 50)
-                ->default('pending')
+                ->default('PENDING')
                 ->index();
 
             $table->text('notes')->nullable();

@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Enums\ProposalStatus;
+use App\Models\GrantProgram;
+use App\Models\Organization;
 use App\Models\Proposal;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -18,11 +20,11 @@ class ProposalFactory extends Factory
     public function definition(): array
     {
         return [
-            'proposal_number' => 'TEST-' . strtoupper(Str::random(10)),
+            'proposal_number' => 'TEST-'.strtoupper(Str::random(10)),
 
-            'grant_program_id' => null,
+            'grant_program_id' => GrantProgram::factory(),
 
-            'organization_id' => null,
+            'organization_id' => Organization::factory(),
 
             'applicant_id' => User::factory(),
 
@@ -60,4 +62,3 @@ class ProposalFactory extends Factory
         ];
     }
 }
-?>

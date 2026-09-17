@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\GrantProgram;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\GrantProgram>
+ * @extends Factory<GrantProgram>
  */
 class GrantProgramFactory extends Factory
 {
@@ -17,7 +18,7 @@ class GrantProgramFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'PROGRAM-' . fake()->unique()->numerify('#######'),
+            'code' => 'PROGRAM-'.fake()->unique()->numerify('#######'),
             'name' => fake()->sentence(3),
             'description' => fake()->paragraph(),
             'fiscal_year' => (string) now()->year,

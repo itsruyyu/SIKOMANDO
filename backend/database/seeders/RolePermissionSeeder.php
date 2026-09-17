@@ -48,7 +48,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'name' => ucwords(str_replace(['.', '_'], ' ', $code)),
                     'module' => $module,
-                    'description' => 'Permission ' . $code,
+                    'description' => 'Permission '.$code,
                 ]
             );
         }

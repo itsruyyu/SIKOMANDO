@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EvaluationCriteria extends Model
 {
-    use HasFactory;
-    use HasUuids;
+    use HasUuid;
 
     protected $table = 'evaluation_criteria';
 
@@ -28,10 +27,21 @@ class EvaluationCriteria extends Model
         'is_active',
     ];
 
-    protected $casts = [
-        'default_weight' => 'decimal:4',
-        'minimum_score' => 'decimal:2',
-        'maximum_score' => 'decimal:2',
-        'is_active' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'default_weight' => 'decimal:4',
+            'minimum_score' => 'decimal:2',
+            'maximum_score' => 'decimal:2',
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(
+            EvaluationItem::class,
+            'evaluation_criteria_id'
+        );
+    }
 }

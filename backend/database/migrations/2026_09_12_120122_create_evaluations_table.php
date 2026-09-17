@@ -19,7 +19,7 @@ return new class extends Migration
                 ->unique();
 
             $table->string('status', 50)
-                ->default('in_progress')
+                ->default('IN_PROGRESS')
                 ->index();
 
             $table->decimal('total_score', 12, 4)
