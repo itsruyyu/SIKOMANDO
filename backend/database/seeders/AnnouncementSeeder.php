@@ -73,4 +73,3 @@ class AnnouncementSeeder extends Seeder
         }
     }
 }
-

@@ -23,4 +23,3 @@ class PublicAnnouncementFilterRequest extends FormRequest
         ];
     }
 }
-

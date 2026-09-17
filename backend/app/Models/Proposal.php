@@ -169,4 +169,9 @@ class Proposal extends Model
     {
         return $this->hasOne(LpjSubmission::class)->orderByDesc('created_at');
     }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(ProposalAssignment::class);
+    }
 }

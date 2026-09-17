@@ -39,4 +39,3 @@ class PublicStatisticController extends Controller
         );
     }
 }
-

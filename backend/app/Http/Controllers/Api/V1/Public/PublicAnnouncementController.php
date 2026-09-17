@@ -48,4 +48,3 @@ class PublicAnnouncementController extends Controller
             ->response();
     }
 }
-

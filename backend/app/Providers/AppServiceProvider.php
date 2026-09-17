@@ -9,6 +9,7 @@ use App\Models\Evaluation;
 use App\Models\FieldSurvey;
 use App\Models\LpjSubmission;
 use App\Models\Proposal;
+use App\Models\ProposalAssignment;
 use App\Models\ProposalDocument;
 use App\Models\Ranking;
 use App\Models\Recommendation;
@@ -20,10 +21,12 @@ use App\Policies\DisbursementPolicy;
 use App\Policies\EvaluationPolicy;
 use App\Policies\FieldSurveyPolicy;
 use App\Policies\LpjPolicy;
+use App\Policies\ProposalAssignmentPolicy;
 use App\Policies\ProposalDocumentPolicy;
 use App\Policies\ProposalPolicy;
 use App\Policies\RankingPolicy;
 use App\Policies\RecommendationPolicy;
+use App\Policies\UserPolicy;
 use App\Policies\VerificationPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -64,5 +67,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Disbursement::class, DisbursementPolicy::class);
         Gate::policy(LpjSubmission::class, LpjPolicy::class);
         Gate::policy(ProposalDocument::class, ProposalDocumentPolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(ProposalAssignment::class, ProposalAssignmentPolicy::class);
     }
 }

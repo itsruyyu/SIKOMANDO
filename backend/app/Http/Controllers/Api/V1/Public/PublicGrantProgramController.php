@@ -76,4 +76,3 @@ class PublicGrantProgramController extends Controller
         );
     }
 }
-

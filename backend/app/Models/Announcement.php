@@ -72,4 +72,3 @@ class Announcement extends Model
             ->orderByDesc('published_at');
     }
 }
-

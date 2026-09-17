@@ -183,4 +183,15 @@ class User extends Authenticatable
     {
         return $this->hasMany(FieldSurvey::class, 'surveyor_id');
     }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(ProposalAssignment::class, 'assigned_user_id');
+    }
+
+    public function activeAssignments(): HasMany
+    {
+        return $this->hasMany(ProposalAssignment::class, 'assigned_user_id')
+            ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS']);
+    }
 }

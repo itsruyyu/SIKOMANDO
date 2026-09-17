@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Enums\AnnouncementStatus;
-use App\Enums\ProposalStatus;
 use App\Models\Announcement;
 use App\Models\GrantProgram;
 use App\Models\Proposal;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -481,7 +481,7 @@ class PublicPortalService
     /**
      * Helper to resolve status of a timeline stage.
      */
-    protected function resolveStageStatus(\Carbon\CarbonInterface $now, ?\Carbon\CarbonInterface $start, ?\Carbon\CarbonInterface $end): string
+    protected function resolveStageStatus(CarbonInterface $now, ?CarbonInterface $start, ?CarbonInterface $end): string
     {
         if (! $start && ! $end) {
             return 'scheduled';

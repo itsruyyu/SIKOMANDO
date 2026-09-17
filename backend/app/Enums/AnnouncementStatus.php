@@ -22,4 +22,3 @@ enum AnnouncementStatus: string
         return $this === self::PUBLISHED;
     }
 }
-

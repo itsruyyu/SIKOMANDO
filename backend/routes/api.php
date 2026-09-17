@@ -3,13 +3,16 @@
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\ApprovalController;
+use App\Http\Controllers\Api\V1\AssignmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DecisionController;
 use App\Http\Controllers\Api\V1\DisbursementController;
 use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\V1\FieldSurveyController;
 use App\Http\Controllers\Api\V1\GrantProgramController;
+use App\Http\Controllers\Api\V1\InternalDashboardController;
 use App\Http\Controllers\Api\V1\LpjController;
+use App\Http\Controllers\Api\V1\PdfDocumentController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\ProposalDocumentController;
 use App\Http\Controllers\Api\V1\Public\PublicAnnouncementController;
@@ -18,6 +21,7 @@ use App\Http\Controllers\Api\V1\Public\PublicStatisticController;
 use App\Http\Controllers\Api\V1\Public\PublicTransparencyController;
 use App\Http\Controllers\Api\V1\RankingController;
 use App\Http\Controllers\Api\V1\RevisionController;
+use App\Http\Controllers\Api\V1\UserManagementController;
 use App\Http\Controllers\Api\V1\VerificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -382,6 +386,58 @@ Route::prefix('v1')->group(function () {
                     ->name('lpj.documents.store');
                 Route::get('/{lpj}/documents/{document}/download', 'downloadDocument')
                     ->name('lpj.documents.download');
+            });
+
+        // User Management Routes (Super Admin + Admin)
+        Route::prefix('users')
+            ->controller(UserManagementController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('users.index');
+                Route::post('/', 'store')->name('users.store');
+                Route::get('/by-role/{roleCode}', 'listByRole')->name('users.by-role');
+                Route::get('/{user}', 'show')->name('users.show');
+                Route::patch('/{user}', 'update')->name('users.update');
+                Route::post('/{user}/toggle-active', 'toggleActive')->name('users.toggle-active');
+                Route::post('/{user}/assign-role', 'assignRole')->name('users.assign-role');
+                Route::post('/{user}/remove-role', 'removeRole')->name('users.remove-role');
+                Route::post('/{user}/reset-password', 'resetPassword')->name('users.reset-password');
+            });
+
+        // Assignment Management Routes
+        Route::prefix('assignments')
+            ->controller(AssignmentController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('assignments.index');
+                Route::get('/my', 'myAssignments')->name('assignments.my');
+                Route::get('/workload', 'workload')->name('assignments.workload');
+                Route::post('/', 'store')->name('assignments.store');
+                Route::get('/{assignment}', 'show')->name('assignments.show');
+                Route::post('/{assignment}/revoke', 'revoke')->name('assignments.revoke');
+            });
+
+        Route::get('proposals/{proposal}/assignments', [AssignmentController::class, 'proposalAssignments'])
+            ->name('proposals.assignments.index');
+
+        // Internal Dashboard Routes
+        Route::prefix('internal/dashboard')
+            ->controller(InternalDashboardController::class)
+            ->group(function () {
+                Route::get('/workload', 'workloadSummary')->name('internal.dashboard.workload');
+                Route::get('/tasks', 'tasksByStatus')->name('internal.dashboard.tasks');
+                Route::get('/assignment-history', 'assignmentHistory')->name('internal.dashboard.assignment-history');
+            });
+
+        // PDF Generation Routes
+        Route::prefix('pdf')
+            ->controller(PdfDocumentController::class)
+            ->group(function () {
+                Route::get('/proposals/{proposal}', 'generateProposalPdf')->name('pdf.proposal');
+                Route::get('/proposals/{proposal}/verifications/{verification}', 'generateVerificationPdf')->name('pdf.verification');
+                Route::get('/proposals/{proposal}/evaluations/{evaluation}', 'generateEvaluationPdf')->name('pdf.evaluation');
+                Route::get('/proposals/{proposal}/field-surveys/{fieldSurvey}', 'generateFieldSurveyPdf')->name('pdf.field-survey');
+                Route::get('/decisions/{decision}', 'generateDecisionPdf')->name('pdf.decision');
+                Route::get('/disbursements/{disbursement}', 'generateDisbursementPdf')->name('pdf.disbursement');
+                Route::get('/lpj/{lpj}', 'generateLpjPdf')->name('pdf.lpj');
             });
     });
 });

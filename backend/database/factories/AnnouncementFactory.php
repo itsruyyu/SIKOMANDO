@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\AnnouncementStatus;
 use App\Models\Announcement;
-use App\Models\GrantProgram;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -65,4 +64,3 @@ class AnnouncementFactory extends Factory
         ]);
     }
 }
-

@@ -21,4 +21,3 @@ class PublicGrantProgramFilterRequest extends FormRequest
         ];
     }
 }
-
