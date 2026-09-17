@@ -35,4 +35,3 @@ enum ApprovalStatus: string
         return ! $this->isFinal();
     }
 }
-

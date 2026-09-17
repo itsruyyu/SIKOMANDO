@@ -2,9 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Enums\ApprovalStatus;
 use App\Enums\DecisionResult;
-use App\Enums\DecisionStatus;
 use App\Enums\EvaluationResult;
 use App\Enums\EvaluationStatus;
 use App\Enums\FieldSurveyItemResult;
@@ -346,7 +344,7 @@ class ApprovalApiTest extends TestCase
         $decisionId = $approveRes->json('data.decision.id');
 
         // Verify decision number follows configured pattern
-        $this->assertStringStartsWith('SK-BUPATI/' . date('Y') . '/' . date('m') . '/0001', $approveRes->json('data.decision.decision_number'));
+        $this->assertStringStartsWith('SK-BUPATI/'.date('Y').'/'.date('m').'/0001', $approveRes->json('data.decision.decision_number'));
 
         // 4. Generate SK Document
         $docRes = $this->postJson("/api/v1/decisions/{$decisionId}/documents", [
@@ -413,8 +411,8 @@ class ApprovalApiTest extends TestCase
         $num1 = $app1->json('data.decision.decision_number');
         $num2 = $app2->json('data.decision.decision_number');
 
-        $this->assertEquals('SK-HIBAH/' . date('Y') . '/0001', $num1);
-        $this->assertEquals('SK-HIBAH/' . date('Y') . '/0002', $num2);
+        $this->assertEquals('SK-HIBAH/'.date('Y').'/0001', $num1);
+        $this->assertEquals('SK-HIBAH/'.date('Y').'/0002', $num2);
         $this->assertNotEquals($num1, $num2);
     }
 
@@ -591,7 +589,7 @@ class ApprovalApiTest extends TestCase
             Recommendation::create([
                 'proposal_id' => $proposal->id,
                 'recommended_by' => $this->admin->id,
-                'recommendation_number' => 'REC-' . Str::upper(Str::random(8)),
+                'recommendation_number' => 'REC-'.Str::upper(Str::random(8)),
                 'status' => RecommendationStatus::COMPLETED,
                 'result' => $isRecommended ? RecommendationResult::RECOMMENDED : RecommendationResult::NOT_RECOMMENDED,
                 'recommended_amount' => $isRecommended ? $proposal->requested_amount : 0,

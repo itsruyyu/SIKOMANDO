@@ -29,4 +29,3 @@ class GenerateDecisionDocumentRequest extends FormRequest
         ];
     }
 }
-

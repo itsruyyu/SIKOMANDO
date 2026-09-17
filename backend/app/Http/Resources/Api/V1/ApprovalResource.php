@@ -64,4 +64,3 @@ class ApprovalResource extends JsonResource
         ];
     }
 }
-

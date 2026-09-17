@@ -27,4 +27,3 @@ class ApprovalActionResource extends JsonResource
         ];
     }
 }
-

@@ -29,4 +29,3 @@ class ReviewApprovalRequest extends FormRequest
         ];
     }
 }
-

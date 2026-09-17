@@ -29,4 +29,3 @@ class NumberingConfigurationFactory extends Factory
         ];
     }
 }
-

@@ -451,4 +451,3 @@ class ApprovalService
             ->findOrFail($id);
     }
 }
-

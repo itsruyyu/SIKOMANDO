@@ -57,4 +57,3 @@ class DecisionPolicy
             && $decision->status === DecisionStatus::PUBLISHED;
     }
 }
-

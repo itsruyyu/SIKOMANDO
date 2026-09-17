@@ -17,17 +17,21 @@ use App\Http\Resources\Api\V1\FieldSurveyItemResource;
 use App\Http\Resources\Api\V1\FieldSurveyResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\FieldSurvey;
+use App\Models\FieldSurveyDocument;
 use App\Models\FieldSurveyItem;
 use App\Models\Proposal;
+use App\Services\DocumentService;
 use App\Services\FieldSurveyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FieldSurveyController extends Controller
 {
     public function __construct(
         private readonly FieldSurveyService $fieldSurveyService,
+        private readonly DocumentService $documentService,
     ) {}
 
     public function index(
@@ -239,6 +243,29 @@ class FieldSurveyController extends Controller
             ])
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function downloadDocument(
+        Proposal $proposal,
+        FieldSurvey $fieldSurvey,
+        FieldSurveyDocument $document,
+        Request $request
+    ): StreamedResponse {
+        $this->ensureSurveyBelongsToProposal(
+            proposal: $proposal,
+            fieldSurvey: $fieldSurvey,
+        );
+
+        if ($document->field_survey_id !== $fieldSurvey->id) {
+            abort(404, 'Dokumen survei tidak ditemukan pada survei lapangan tersebut.');
+        }
+
+        $this->authorize('view', $fieldSurvey);
+
+        return $this->documentService->downloadFieldSurveyDocument(
+            document: $document,
+            actor: $request->user(),
+        );
     }
 
     public function fillResult(

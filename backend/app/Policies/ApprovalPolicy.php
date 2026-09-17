@@ -46,4 +46,3 @@ class ApprovalPolicy
         return $user->hasRole('APPROVER') || $user->hasPermission('proposal.reject');
     }
 }
-

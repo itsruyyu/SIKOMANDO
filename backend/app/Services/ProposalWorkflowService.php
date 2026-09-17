@@ -25,6 +25,7 @@ class ProposalWorkflowService
         ],
         'revision' => [
             'submitted',
+            'lpj_submitted',
             'cancelled',
         ],
         'verified' => [
@@ -54,6 +55,7 @@ class ProposalWorkflowService
         ],
         'disbursed' => [
             'implementation',
+            'lpj_submitted',
         ],
         'implementation' => [
             'lpj_submitted',
@@ -62,6 +64,7 @@ class ProposalWorkflowService
         'lpj_submitted' => [
             'lpj_verified',
             'revision',
+            'completed',
         ],
         'lpj_verified' => [
             'completed',

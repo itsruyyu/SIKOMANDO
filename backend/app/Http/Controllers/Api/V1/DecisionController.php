@@ -115,4 +115,3 @@ class DecisionController extends Controller
         }
     }
 }
-

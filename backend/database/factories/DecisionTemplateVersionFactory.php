@@ -29,4 +29,3 @@ class DecisionTemplateVersionFactory extends Factory
         ];
     }
 }
-

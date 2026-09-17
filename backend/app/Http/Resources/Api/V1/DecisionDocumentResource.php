@@ -45,4 +45,3 @@ class DecisionDocumentResource extends JsonResource
         ];
     }
 }
-

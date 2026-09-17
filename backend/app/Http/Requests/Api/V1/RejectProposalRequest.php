@@ -50,4 +50,3 @@ class RejectProposalRequest extends FormRequest
         ];
     }
 }
-

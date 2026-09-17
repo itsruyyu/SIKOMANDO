@@ -15,4 +15,3 @@ enum DecisionResult: string
         };
     }
 }
-

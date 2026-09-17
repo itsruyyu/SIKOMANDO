@@ -149,4 +149,24 @@ class Proposal extends Model
     {
         return $this->hasOne(Decision::class)->orderByDesc('created_at');
     }
+
+    public function disbursementPlans(): HasMany
+    {
+        return $this->hasMany(DisbursementPlan::class);
+    }
+
+    public function disbursements(): HasMany
+    {
+        return $this->hasMany(Disbursement::class);
+    }
+
+    public function lpjSubmissions(): HasMany
+    {
+        return $this->hasMany(LpjSubmission::class);
+    }
+
+    public function latestLpjSubmission(): HasOne
+    {
+        return $this->hasOne(LpjSubmission::class)->orderByDesc('created_at');
+    }
 }

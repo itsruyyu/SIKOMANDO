@@ -35,4 +35,3 @@ class SubmitApprovalRequest extends FormRequest
         ];
     }
 }
-

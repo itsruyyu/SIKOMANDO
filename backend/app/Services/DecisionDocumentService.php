@@ -69,7 +69,7 @@ class DecisionDocumentService
                 'proposal_number' => $proposal->proposal_number,
                 'proposal_title' => $proposal->title,
                 'organization_name' => $proposal->organization?->name ?: 'Penerima Hibah',
-                'approved_amount' => 'Rp ' . number_format((float) ($decision->approved_amount ?: $proposal->requested_amount), 0, ',', '.'),
+                'approved_amount' => 'Rp '.number_format((float) ($decision->approved_amount ?: $proposal->requested_amount), 0, ',', '.'),
                 'program_name' => $proposal->grantProgram?->name ?: 'Program Hibah SIKOMANDO',
                 'fiscal_year' => $proposal->grantProgram?->fiscal_year ?: date('Y'),
                 'signer_name' => $decision->issuer?->name ?: $actor->name,
@@ -78,9 +78,9 @@ class DecisionDocumentService
 
             // 3. Save to private storage
             $disk = 'private';
-            $safeName = Str::slug($decision->decision_number ?: 'sk-' . $decision->id);
-            $filename = $safeName . '.html';
-            $storagePath = 'decisions/' . $decision->id . '/' . $filename;
+            $safeName = Str::slug($decision->decision_number ?: 'sk-'.$decision->id);
+            $filename = $safeName.'.html';
+            $storagePath = 'decisions/'.$decision->id.'/'.$filename;
 
             Storage::disk($disk)->put($storagePath, $renderedContent);
 
@@ -168,8 +168,8 @@ class DecisionDocumentService
     {
         $content = $template;
         foreach ($data as $key => $value) {
-            $content = str_replace('{{' . $key . '}}', (string) $value, $content);
-            $content = str_replace('{{ ' . $key . ' }}', (string) $value, $content);
+            $content = str_replace('{{'.$key.'}}', (string) $value, $content);
+            $content = str_replace('{{ '.$key.' }}', (string) $value, $content);
         }
 
         return $content;

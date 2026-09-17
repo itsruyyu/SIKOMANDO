@@ -96,10 +96,9 @@ class NumberingService
     {
         $formatted = $pattern;
         foreach ($replacements as $key => $value) {
-            $formatted = str_replace('{' . $key . '}', $value, $formatted);
+            $formatted = str_replace('{'.$key.'}', $value, $formatted);
         }
 
         return $formatted;
     }
 }
-

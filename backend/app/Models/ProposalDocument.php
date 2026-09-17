@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProposalDocument extends Model
@@ -69,5 +71,17 @@ class ProposalDocument extends Model
     public function verifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(ProposalDocumentVersion::class, 'proposal_document_id')
+            ->orderByDesc('version_number');
+    }
+
+    public function latestVersion(): HasOne
+    {
+        return $this->hasOne(ProposalDocumentVersion::class, 'proposal_document_id')
+            ->orderByDesc('version_number');
     }
 }

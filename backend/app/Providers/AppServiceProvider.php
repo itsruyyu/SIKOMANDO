@@ -4,17 +4,23 @@ namespace App\Providers;
 
 use App\Models\Approval;
 use App\Models\Decision;
+use App\Models\Disbursement;
 use App\Models\Evaluation;
 use App\Models\FieldSurvey;
+use App\Models\LpjSubmission;
 use App\Models\Proposal;
+use App\Models\ProposalDocument;
 use App\Models\Ranking;
 use App\Models\Recommendation;
 use App\Models\User;
 use App\Models\Verification;
 use App\Policies\ApprovalPolicy;
 use App\Policies\DecisionPolicy;
+use App\Policies\DisbursementPolicy;
 use App\Policies\EvaluationPolicy;
 use App\Policies\FieldSurveyPolicy;
+use App\Policies\LpjPolicy;
+use App\Policies\ProposalDocumentPolicy;
 use App\Policies\ProposalPolicy;
 use App\Policies\RankingPolicy;
 use App\Policies\RecommendationPolicy;
@@ -55,5 +61,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Recommendation::class, RecommendationPolicy::class);
         Gate::policy(Approval::class, ApprovalPolicy::class);
         Gate::policy(Decision::class, DecisionPolicy::class);
+        Gate::policy(Disbursement::class, DisbursementPolicy::class);
+        Gate::policy(LpjSubmission::class, LpjPolicy::class);
+        Gate::policy(ProposalDocument::class, ProposalDocumentPolicy::class);
     }
 }

@@ -59,4 +59,3 @@ class Approval extends Model
         return $this->hasOne(Decision::class);
     }
 }
-

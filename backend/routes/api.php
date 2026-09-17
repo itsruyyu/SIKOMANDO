@@ -5,10 +5,17 @@ use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DecisionController;
+use App\Http\Controllers\Api\V1\DisbursementController;
 use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\V1\FieldSurveyController;
 use App\Http\Controllers\Api\V1\GrantProgramController;
+use App\Http\Controllers\Api\V1\LpjController;
 use App\Http\Controllers\Api\V1\ProposalController;
+use App\Http\Controllers\Api\V1\ProposalDocumentController;
+use App\Http\Controllers\Api\V1\Public\PublicAnnouncementController;
+use App\Http\Controllers\Api\V1\Public\PublicGrantProgramController;
+use App\Http\Controllers\Api\V1\Public\PublicStatisticController;
+use App\Http\Controllers\Api\V1\Public\PublicTransparencyController;
 use App\Http\Controllers\Api\V1\RankingController;
 use App\Http\Controllers\Api\V1\RevisionController;
 use App\Http\Controllers\Api\V1\VerificationController;
@@ -29,6 +36,27 @@ Route::prefix('v1')->group(function () {
         GrantProgramController::class,
         'show',
     ]);
+
+    // Public Portal Routes (No authentication required)
+    Route::prefix('public')->group(function () {
+        // Grant Programs
+        Route::get('/grant-programs', [PublicGrantProgramController::class, 'index'])->name('public.grant-programs.index');
+        Route::get('/grant-programs/{grantProgram}', [PublicGrantProgramController::class, 'show'])->name('public.grant-programs.show');
+        Route::get('/grant-programs/{grantProgram}/timeline', [PublicGrantProgramController::class, 'timeline'])->name('public.grant-programs.timeline');
+        Route::get('/grant-programs/{grantProgram}/documents', [PublicGrantProgramController::class, 'documents'])->name('public.grant-programs.documents');
+
+        // Announcements
+        Route::get('/announcements', [PublicAnnouncementController::class, 'index'])->name('public.announcements.index');
+        Route::get('/announcements/{announcement}', [PublicAnnouncementController::class, 'show'])->name('public.announcements.show');
+
+        // Statistics
+        Route::get('/statistics', [PublicStatisticController::class, 'index'])->name('public.statistics.index');
+        Route::get('/statistics/summary', [PublicStatisticController::class, 'summary'])->name('public.statistics.summary');
+
+        // Transparency
+        Route::get('/transparency', [PublicTransparencyController::class, 'index'])->name('public.transparency.index');
+        Route::get('/transparency/{grantProgram}', [PublicTransparencyController::class, 'show'])->name('public.transparency.show');
+    });
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [
@@ -80,6 +108,19 @@ Route::prefix('v1')->group(function () {
             RevisionController::class,
             'submit',
         ]);
+
+        Route::prefix('proposals/{proposal}/documents')
+            ->scopeBindings()
+            ->controller(ProposalDocumentController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('proposals.documents.index');
+                Route::post('/', 'store')->name('proposals.documents.store');
+                Route::get('/{document}', 'show')->name('proposals.documents.show');
+                Route::get('/{document}/download', 'download')->name('proposals.documents.download');
+                Route::post('/{document}/replace', 'replace')->name('proposals.documents.replace');
+                Route::get('/{document}/versions', 'versions')->name('proposals.documents.versions');
+                Route::delete('/{document}', 'destroy')->name('proposals.documents.destroy');
+            });
 
         Route::prefix('notifications')->group(function () {
             Route::get('/', [NotificationController::class, 'index']);
@@ -176,6 +217,9 @@ Route::prefix('v1')->group(function () {
                 Route::post('/{fieldSurvey}/documents', 'storeDocument')
                     ->name('proposals.field-surveys.documents.store');
 
+                Route::get('/{fieldSurvey}/documents/{document}/download', 'downloadDocument')
+                    ->name('proposals.field-surveys.documents.download');
+
                 Route::patch('/{fieldSurvey}/result', 'fillResult')
                     ->name('proposals.field-surveys.result.update');
 
@@ -264,6 +308,80 @@ Route::prefix('v1')->group(function () {
                     ->name('decisions.documents.show');
                 Route::get('/{decision}/documents/{document}/download', 'downloadDocument')
                     ->name('decisions.documents.download');
+            });
+
+        // Disbursement routes
+        Route::prefix('proposals/{proposal}/disbursement-plans')
+            ->scopeBindings()
+            ->controller(DisbursementController::class)
+            ->group(function () {
+                Route::post('/', 'storePlan')
+                    ->name('proposals.disbursement-plans.store');
+            });
+
+        Route::get('proposals/{proposal}/disbursements', [DisbursementController::class, 'proposalDisbursements'])
+            ->name('proposals.disbursements.index');
+
+        Route::get('proposals/{proposal}/disbursement-summary', [DisbursementController::class, 'proposalSummary'])
+            ->name('proposals.disbursement-summary.show');
+
+        Route::prefix('disbursements')
+            ->controller(DisbursementController::class)
+            ->group(function () {
+                Route::get('/', 'index')
+                    ->name('disbursements.index');
+                Route::get('/{disbursement}', 'show')
+                    ->name('disbursements.show');
+                Route::post('/{disbursement}/verify', 'verify')
+                    ->name('disbursements.verify');
+                Route::post('/{disbursement}/approve', 'approve')
+                    ->name('disbursements.approve');
+                Route::post('/{disbursement}/transactions', 'recordTransaction')
+                    ->name('disbursements.transactions.store');
+            });
+
+        // LPJ and Closing routes
+        Route::prefix('proposals/{proposal}/lpj')
+            ->scopeBindings()
+            ->controller(LpjController::class)
+            ->group(function () {
+                Route::get('/', 'proposalLpjs')
+                    ->name('proposals.lpj.index');
+                Route::post('/', 'store')
+                    ->name('proposals.lpj.store');
+            });
+
+        Route::get('proposals/{proposal}/closing-summary', [LpjController::class, 'closingSummary'])
+            ->name('proposals.closing-summary.show');
+
+        Route::post('proposals/{proposal}/close', [LpjController::class, 'closeProposal'])
+            ->name('proposals.close');
+
+        Route::prefix('lpj')
+            ->controller(LpjController::class)
+            ->group(function () {
+                Route::get('/', 'index')
+                    ->name('lpj.index');
+                Route::get('/{lpj}', 'show')
+                    ->name('lpj.show');
+                Route::patch('/{lpj}', 'update')
+                    ->name('lpj.update');
+                Route::post('/{lpj}/submit', 'submit')
+                    ->name('lpj.submit');
+                Route::post('/{lpj}/review', 'review')
+                    ->name('lpj.review');
+                Route::post('/{lpj}/request-revision', 'requestRevision')
+                    ->name('lpj.request-revision');
+                Route::post('/{lpj}/approve', 'approve')
+                    ->name('lpj.approve');
+                Route::post('/{lpj}/reject', 'reject')
+                    ->name('lpj.reject');
+                Route::post('/{lpj}/finalize', 'finalize')
+                    ->name('lpj.finalize');
+                Route::post('/{lpj}/documents', 'uploadDocument')
+                    ->name('lpj.documents.store');
+                Route::get('/{lpj}/documents/{document}/download', 'downloadDocument')
+                    ->name('lpj.documents.download');
             });
     });
 });

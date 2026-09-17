@@ -17,7 +17,7 @@ class DecisionTemplateFactory extends Factory
     public function definition(): array
     {
         return [
-            'code' => 'SK_' . Str::upper(Str::random(6)),
+            'code' => 'SK_'.Str::upper(Str::random(6)),
             'name' => 'Template Surat Keputusan',
             'document_type' => 'decision_letter',
             'description' => fake()->sentence(),
@@ -27,4 +27,3 @@ class DecisionTemplateFactory extends Factory
         ];
     }
 }
-

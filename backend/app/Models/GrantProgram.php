@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuid;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -100,5 +101,18 @@ class GrantProgram extends Model
     public function numberingConfigurations(): HasMany
     {
         return $this->hasMany(NumberingConfiguration::class);
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class);
+    }
+
+    /**
+     * Scope query to only include publicly available (active) programs.
+     */
+    public function scopePubliclyAvailable(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
     }
 }

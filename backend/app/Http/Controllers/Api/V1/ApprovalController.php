@@ -125,4 +125,3 @@ class ApprovalController extends Controller
         ]);
     }
 }
-
