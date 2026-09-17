@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\CompleteEvaluationRequest;
 use App\Http\Requests\Api\V1\StoreEvaluationRequest;
 use App\Http\Requests\Api\V1\UpdateEvaluationItemRequest;
 use App\Http\Resources\Api\V1\EvaluationResource;
+use App\Http\Responses\ApiResponse;
 use App\Models\Evaluation;
 use App\Models\EvaluationItem;
 use App\Models\Proposal;
@@ -28,7 +29,11 @@ class EvaluationController extends Controller
         $evaluations = $this->evaluationService
             ->paginateForProposal($proposal);
 
-        return EvaluationResource::collection($evaluations);
+        return EvaluationResource::collection($evaluations)
+            ->additional([
+                'success' => true,
+                'message' => 'Daftar evaluasi berhasil diambil.',
+            ]);
     }
 
     public function store(
@@ -50,6 +55,10 @@ class EvaluationController extends Controller
                 'items.criteria',
             ])
         ))
+            ->additional([
+                'success' => true,
+                'message' => 'Evaluasi berhasil dibuat.',
+            ])
             ->response()
             ->setStatusCode(201);
     }
@@ -70,7 +79,11 @@ class EvaluationController extends Controller
             evaluation: $evaluation,
         );
 
-        return new EvaluationResource($evaluation);
+        return (new EvaluationResource($evaluation))
+            ->additional([
+                'success' => true,
+                'message' => 'Detail evaluasi berhasil diambil.',
+            ]);
     }
 
     public function updateItem(
@@ -97,13 +110,17 @@ class EvaluationController extends Controller
             data: $request->validated(),
         );
 
-        return new EvaluationResource(
+        return (new EvaluationResource(
             $evaluation->load([
                 'proposal',
                 'evaluator',
                 'items.criteria',
             ])
-        );
+        ))
+            ->additional([
+                'success' => true,
+                'message' => 'Item evaluasi berhasil diperbarui.',
+            ]);
     }
 
     public function complete(
@@ -123,12 +140,35 @@ class EvaluationController extends Controller
             data: $request->validated(),
         );
 
-        return new EvaluationResource(
+        return (new EvaluationResource(
             $evaluation->load([
                 'proposal',
                 'evaluator',
                 'items.criteria',
             ])
+        ))
+            ->additional([
+                'success' => true,
+                'message' => 'Evaluasi berhasil diselesaikan.',
+            ]);
+    }
+
+    public function destroy(
+        Proposal $proposal,
+        Evaluation $evaluation
+    ): JsonResponse {
+        $this->ensureEvaluationBelongsToProposal(
+            proposal: $proposal,
+            evaluation: $evaluation,
+        );
+
+        $this->authorize('delete', $evaluation);
+
+        $this->evaluationService->delete($evaluation);
+
+        return ApiResponse::success(
+            null,
+            'Evaluasi berhasil dihapus.'
         );
     }
 

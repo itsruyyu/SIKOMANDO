@@ -25,7 +25,7 @@ class EvaluationFactory extends Factory
         return [
             'proposal_id' => Proposal::factory(),
             'evaluator_id' => User::factory(),
-            'evaluation_number' => 'EVAL-' . now()->format('Ymd') . '-' . Str::upper(Str::random(8)),
+            'evaluation_number' => 'EVAL-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)),
             'status' => EvaluationStatus::IN_PROGRESS,
             'total_score' => 0,
             'final_score' => 0,
@@ -47,7 +47,7 @@ class EvaluationFactory extends Factory
             if ($criteria->isEmpty()) {
                 $criteria = collect([
                     EvaluationCriteria::query()->create([
-                        'code' => 'CRITERIA-' . Str::upper(Str::random(8)),
+                        'code' => 'CRITERIA-'.Str::upper(Str::random(8)),
                         'name' => 'Kriteria Evaluasi Default',
                         'description' => 'Kriteria evaluasi default.',
                         'criterion_type' => 'score',
@@ -80,4 +80,3 @@ class EvaluationFactory extends Factory
         });
     }
 }
-

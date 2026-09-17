@@ -2,10 +2,22 @@
 
 namespace App\Providers;
 
+use App\Models\Approval;
+use App\Models\Decision;
+use App\Models\Evaluation;
+use App\Models\FieldSurvey;
 use App\Models\Proposal;
+use App\Models\Ranking;
+use App\Models\Recommendation;
 use App\Models\User;
 use App\Models\Verification;
+use App\Policies\ApprovalPolicy;
+use App\Policies\DecisionPolicy;
+use App\Policies\EvaluationPolicy;
+use App\Policies\FieldSurveyPolicy;
 use App\Policies\ProposalPolicy;
+use App\Policies\RankingPolicy;
+use App\Policies\RecommendationPolicy;
 use App\Policies\VerificationPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -37,5 +49,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::policy(Verification::class, VerificationPolicy::class);
+        Gate::policy(Evaluation::class, EvaluationPolicy::class);
+        Gate::policy(FieldSurvey::class, FieldSurveyPolicy::class);
+        Gate::policy(Ranking::class, RankingPolicy::class);
+        Gate::policy(Recommendation::class, RecommendationPolicy::class);
+        Gate::policy(Approval::class, ApprovalPolicy::class);
+        Gate::policy(Decision::class, DecisionPolicy::class);
     }
 }

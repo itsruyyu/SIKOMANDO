@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Proposal;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\MasterDataSeeder;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class AuthorizationTest extends TestCase
@@ -18,14 +19,14 @@ class AuthorizationTest extends TestCase
         parent::setUp();
 
         $this->seed([
-            \Database\Seeders\RolePermissionSeeder::class,
-            \Database\Seeders\MasterDataSeeder::class,
+            RolePermissionSeeder::class,
+            MasterDataSeeder::class,
         ]);
 
         $this->seed([
-            \Database\Seeders\RolePermissionSeeder::class,
-            \Database\Seeders\AdminUserSeeder::class,
-            \Database\Seeders\MasterDataSeeder::class,
+            RolePermissionSeeder::class,
+            AdminUserSeeder::class,
+            MasterDataSeeder::class,
         ]);
     }
 

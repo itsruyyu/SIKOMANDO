@@ -178,4 +178,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Notification::class);
     }
+
+    public function assignedFieldSurveys(): HasMany
+    {
+        return $this->hasMany(FieldSurvey::class, 'surveyor_id');
+    }
 }

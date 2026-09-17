@@ -100,46 +100,45 @@ class AuthenticationApiTest extends TestCase
         $response->assertUnauthorized();
     }
 
-public function test_user_can_logout(): void
-{
-    $user = User::factory()->create([
-        'is_active' => true,
-    ]);
+    public function test_user_can_logout(): void
+    {
+        $user = User::factory()->create([
+            'is_active' => true,
+        ]);
 
-    $tokenResult = $user->createToken('test-token');
+        $tokenResult = $user->createToken('test-token');
 
-    $token = $tokenResult->plainTextToken;
-    $tokenId = $tokenResult->accessToken->id;
+        $token = $tokenResult->plainTextToken;
+        $tokenId = $tokenResult->accessToken->id;
 
-    // Pastikan token berhasil dibuat.
-    $this->assertDatabaseHas('personal_access_tokens', [
-        'id' => $tokenId,
-        'tokenable_id' => $user->id,
-    ]);
+        // Pastikan token berhasil dibuat.
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'id' => $tokenId,
+            'tokenable_id' => $user->id,
+        ]);
 
-    // Logout menggunakan token tersebut.
-    $logoutResponse = $this
-        ->withToken($token)
-        ->postJson('/api/v1/auth/logout');
+        // Logout menggunakan token tersebut.
+        $logoutResponse = $this
+            ->withToken($token)
+            ->postJson('/api/v1/auth/logout');
 
-    $logoutResponse
-        ->assertOk()
-        ->assertJsonPath('success', true);
+        $logoutResponse
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-    // Pastikan token benar-benar dihapus.
-    $this->assertDatabaseMissing('personal_access_tokens', [
-        'id' => $tokenId,
-    ]);
+        // Pastikan token benar-benar dihapus.
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $tokenId,
+        ]);
 
-    // Reset authentication state pada test application.
-    $this->app['auth']->forgetGuards();
+        // Reset authentication state pada test application.
+        $this->app['auth']->forgetGuards();
 
-    // Coba gunakan kembali token yang sudah dihapus.
-    $meResponse = $this
-        ->withToken($token)
-        ->getJson('/api/v1/auth/me');
+        // Coba gunakan kembali token yang sudah dihapus.
+        $meResponse = $this
+            ->withToken($token)
+            ->getJson('/api/v1/auth/me');
 
-    $meResponse->assertUnauthorized();
-}
-
+        $meResponse->assertUnauthorized();
+    }
 }

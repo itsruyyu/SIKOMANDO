@@ -43,35 +43,35 @@ class ApiErrorResponseTest extends TestCase
             ]);
     }
 
-public function test_pemohon_receives_standard_forbidden_response(): void
-{
-    $user = User::factory()->create([
-        'is_active' => true,
-    ]);
-
-    $role = Role::query()->firstOrCreate(
-        ['code' => 'PEMOHON'],
-        [
-            'name' => 'Pemohon',
-            'description' => 'Role pemohon hibah',
-        ]
-    );
-
-    $user->roles()->attach($role->id);
-
-    $token = $user
-        ->createToken('api-error-test')
-        ->plainTextToken;
-
-    $response = $this
-        ->withToken($token)
-        ->postJson('/api/v1/proposals', []);
-
-    $response
-        ->assertStatus(403)
-        ->assertJson([
-            'success' => false,
-            'message' => 'Anda tidak memiliki izin untuk melakukan tindakan ini.',
+    public function test_pemohon_receives_standard_forbidden_response(): void
+    {
+        $user = User::factory()->create([
+            'is_active' => true,
         ]);
-}
+
+        $role = Role::query()->firstOrCreate(
+            ['code' => 'PEMOHON'],
+            [
+                'name' => 'Pemohon',
+                'description' => 'Role pemohon hibah',
+            ]
+        );
+
+        $user->roles()->attach($role->id);
+
+        $token = $user
+            ->createToken('api-error-test')
+            ->plainTextToken;
+
+        $response = $this
+            ->withToken($token)
+            ->postJson('/api/v1/proposals', []);
+
+        $response
+            ->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk melakukan tindakan ini.',
+            ]);
+    }
 }

@@ -94,7 +94,7 @@ class ApiContractTest extends TestCase
         $user = $this->createPemohon();
 
         $program = GrantProgram::query()->create([
-            'code' => 'CONTRACT-PROGRAM-' . uniqid(),
+            'code' => 'CONTRACT-PROGRAM-'.uniqid(),
             'name' => 'Program Contract Test',
             'fiscal_year' => now()->year,
             'status' => 'active',
@@ -102,7 +102,7 @@ class ApiContractTest extends TestCase
         ]);
 
         $organization = Organization::query()->create([
-            'code' => 'CONTRACT-ORG-' . uniqid(),
+            'code' => 'CONTRACT-ORG-'.uniqid(),
             'name' => 'Organisasi Contract Test',
             'organization_type' => 'organization',
             'is_active' => true,
@@ -146,7 +146,7 @@ class ApiContractTest extends TestCase
         $user = $this->createPemohon();
 
         $program = GrantProgram::query()->create([
-            'code' => 'SHOW-PROGRAM-' . uniqid(),
+            'code' => 'SHOW-PROGRAM-'.uniqid(),
             'name' => 'Program Show Contract',
             'fiscal_year' => now()->year,
             'status' => 'active',
@@ -154,7 +154,7 @@ class ApiContractTest extends TestCase
         ]);
 
         $organization = Organization::query()->create([
-            'code' => 'SHOW-ORG-' . uniqid(),
+            'code' => 'SHOW-ORG-'.uniqid(),
             'name' => 'Organisasi Show Contract',
             'organization_type' => 'organization',
             'is_active' => true,
@@ -163,7 +163,7 @@ class ApiContractTest extends TestCase
         ]);
 
         $proposal = Proposal::query()->create([
-            'proposal_number' => 'SHOW-' . uniqid(),
+            'proposal_number' => 'SHOW-'.uniqid(),
             'grant_program_id' => $program->id,
             'organization_id' => $organization->id,
             'applicant_id' => $user->id,

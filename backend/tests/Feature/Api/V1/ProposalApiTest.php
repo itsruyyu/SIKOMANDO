@@ -110,7 +110,7 @@ class ProposalApiTest extends TestCase
             'applicant_id' => $userB->id,
             'title' => 'Proposal milik User B',
             'requested_amount' => 10000000,
-            'status' => \App\Enums\ProposalStatus::DRAFT,
+            'status' => ProposalStatus::DRAFT,
             'revision_count' => 0,
             'created_by' => $userB->id,
             'updated_by' => $userB->id,
@@ -142,7 +142,7 @@ class ProposalApiTest extends TestCase
         $userB->roles()->attach($role->id);
 
         $program = GrantProgram::query()->create([
-            'code' => 'TEST-PROGRAM-' . uniqid(),
+            'code' => 'TEST-PROGRAM-'.uniqid(),
             'name' => 'Program Test',
             'fiscal_year' => now()->year,
             'status' => 'active',
@@ -150,7 +150,7 @@ class ProposalApiTest extends TestCase
         ]);
 
         $organization = Organization::query()->create([
-            'code' => 'TEST-ORG-' . uniqid(),
+            'code' => 'TEST-ORG-'.uniqid(),
             'name' => 'Organisasi Test',
             'organization_type' => 'organization',
             'is_active' => true,
@@ -159,26 +159,26 @@ class ProposalApiTest extends TestCase
         ]);
 
         Proposal::query()->create([
-            'proposal_number' => 'TEST-A-' . uniqid(),
+            'proposal_number' => 'TEST-A-'.uniqid(),
             'grant_program_id' => $program->id,
             'organization_id' => $organization->id,
             'applicant_id' => $userA->id,
             'title' => 'Proposal User A',
             'requested_amount' => 10000000,
-            'status' => \App\Enums\ProposalStatus::DRAFT,
+            'status' => ProposalStatus::DRAFT,
             'revision_count' => 0,
             'created_by' => $userA->id,
             'updated_by' => $userA->id,
         ]);
 
         Proposal::query()->create([
-            'proposal_number' => 'TEST-B-' . uniqid(),
+            'proposal_number' => 'TEST-B-'.uniqid(),
             'grant_program_id' => $program->id,
             'organization_id' => $organization->id,
             'applicant_id' => $userB->id,
             'title' => 'Proposal User B',
             'requested_amount' => 15000000,
-            'status' => \App\Enums\ProposalStatus::DRAFT,
+            'status' => ProposalStatus::DRAFT,
             'revision_count' => 0,
             'created_by' => $userB->id,
             'updated_by' => $userB->id,
@@ -195,5 +195,3 @@ class ProposalApiTest extends TestCase
             ->assertJsonPath('data.0.title', 'Proposal User A');
     }
 }
-
-?>

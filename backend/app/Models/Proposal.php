@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Proposal extends Model
@@ -107,5 +108,45 @@ class Proposal extends Model
     public function evaluations(): HasMany
     {
         return $this->hasMany(Evaluation::class);
+    }
+
+    public function fieldSurveys(): HasMany
+    {
+        return $this->hasMany(FieldSurvey::class);
+    }
+
+    public function recommendations(): HasMany
+    {
+        return $this->hasMany(Recommendation::class);
+    }
+
+    public function recommendation(): HasOne
+    {
+        return $this->hasOne(Recommendation::class)->orderByDesc('created_at');
+    }
+
+    public function rankingItems(): HasMany
+    {
+        return $this->hasMany(RankingItem::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(Approval::class);
+    }
+
+    public function approval(): HasOne
+    {
+        return $this->hasOne(Approval::class)->orderByDesc('created_at');
+    }
+
+    public function decisions(): HasMany
+    {
+        return $this->hasMany(Decision::class);
+    }
+
+    public function decision(): HasOne
+    {
+        return $this->hasOne(Decision::class)->orderByDesc('created_at');
     }
 }

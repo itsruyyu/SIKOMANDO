@@ -86,4 +86,19 @@ class GrantProgram extends Model
     {
         return $this->hasMany(EvaluationWeightConfiguration::class);
     }
+
+    public function rankingRuleConfigurations(): HasMany
+    {
+        return $this->hasMany(RankingRuleConfiguration::class);
+    }
+
+    public function rankings(): HasMany
+    {
+        return $this->hasMany(Ranking::class);
+    }
+
+    public function numberingConfigurations(): HasMany
+    {
+        return $this->hasMany(NumberingConfiguration::class);
+    }
 }

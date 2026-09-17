@@ -5,9 +5,13 @@ namespace App\Services;
 use App\Enums\EvaluationItemResult;
 use App\Enums\EvaluationResult;
 use App\Enums\EvaluationStatus;
+use App\Enums\ProposalStatus;
 use App\Models\Evaluation;
 use App\Models\EvaluationCriteria;
 use App\Models\EvaluationItem;
+use App\Models\EvaluationWeightConfiguration;
+use App\Models\PolicyConfiguration;
+use App\Models\PolicyVersion;
 use App\Models\Proposal;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -19,6 +23,8 @@ class EvaluationService
     public function __construct(
         private readonly DatabaseManager $database,
         private readonly ProposalWorkflowService $proposalWorkflowService,
+        private readonly PolicyConfigurationService $policyConfigurationService,
+        private readonly AuditLogService $auditLogService,
     ) {}
 
     public function paginateForProposal(
@@ -39,7 +45,9 @@ class EvaluationService
         Proposal $proposal,
         Evaluation|string $evaluation,
     ): Evaluation {
-        $evaluationId = $evaluation instanceof Evaluation ? $evaluation->id : $evaluation;
+        $evaluationId = $evaluation instanceof Evaluation
+            ? $evaluation->id
+            : $evaluation;
 
         return Evaluation::query()
             ->with([
@@ -57,11 +65,27 @@ class EvaluationService
         User|string $user,
         array|string|null $data = null,
     ): Evaluation {
-        $evaluatorId = $user instanceof User ? (string) $user->id : (string) $user;
-        $notes = is_array($data) ? ($data['notes'] ?? null) : (is_string($data) ? $data : null);
+        $evaluatorId = $user instanceof User
+            ? (string) $user->id
+            : (string) $user;
+
+        $notes = is_array($data)
+            ? ($data['notes'] ?? null)
+            : (is_string($data) ? $data : null);
+
+        $proposalStatus = $proposal->status instanceof \BackedEnum
+            ? $proposal->status->value
+            : (string) $proposal->status;
+
+        if (! in_array($proposalStatus, [ProposalStatus::VERIFIED->value, ProposalStatus::EVALUATION->value], true)) {
+            throw ValidationException::withMessages([
+                'proposal' => 'Proposal harus berada pada status verified atau evaluation untuk dapat dievaluasi.',
+            ]);
+        }
 
         return $this->database->transaction(function () use (
             $proposal,
+            $proposalStatus,
             $evaluatorId,
             $notes,
         ): Evaluation {
@@ -71,26 +95,65 @@ class EvaluationService
                 ->whereIn('status', [
                     EvaluationStatus::DRAFT->value,
                     EvaluationStatus::IN_PROGRESS->value,
+                    EvaluationStatus::COMPLETED->value,
                 ])
                 ->first();
 
             if ($existing !== null) {
-                return $existing->load([
-                    'proposal',
-                    'evaluator:id,name,email',
-                    'items.criteria',
+                throw ValidationException::withMessages([
+                    'evaluation' => 'Evaluator sudah memiliki evaluasi untuk proposal ini.',
                 ]);
             }
 
-            $criteria = EvaluationCriteria::query()
-                ->where('is_active', true)
-                ->orderBy('code')
-                ->get();
+            $weights = collect();
 
-            if ($criteria->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'evaluation' => 'Belum tersedia kriteria evaluasi aktif.',
-                ]);
+            $policyConfiguration = PolicyConfiguration::query()
+                ->where('code', 'EVALUATION')
+                ->where('is_active', true)
+                ->first();
+
+            if ($policyConfiguration !== null) {
+                $activePolicyVersion = PolicyVersion::query()
+                    ->where('policy_configuration_id', $policyConfiguration->id)
+                    ->where('status', 'approved')
+                    ->where(function ($query): void {
+                        $query->whereNull('effective_from')
+                            ->orWhere('effective_from', '<=', now());
+                    })
+                    ->where(function ($query): void {
+                        $query->whereNull('effective_until')
+                            ->orWhere('effective_until', '>=', now());
+                    })
+                    ->orderByDesc('effective_from')
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                if ($activePolicyVersion !== null) {
+                    $weights = EvaluationWeightConfiguration::query()
+                        ->with('criteria')
+                        ->where('grant_program_id', $proposal->grant_program_id)
+                        ->where('policy_version_id', $activePolicyVersion->id)
+                        ->where('is_active', true)
+                        ->whereHas('criteria', function ($query): void {
+                            $query->where('is_active', true);
+                        })
+                        ->orderBy('sort_order')
+                        ->orderBy('evaluation_criteria_id')
+                        ->get();
+                }
+            }
+
+            if ($weights->isEmpty()) {
+                $criteria = EvaluationCriteria::query()
+                    ->where('is_active', true)
+                    ->orderBy('code')
+                    ->get();
+
+                if ($criteria->isEmpty()) {
+                    throw ValidationException::withMessages([
+                        'evaluation' => 'Belum tersedia kriteria evaluasi aktif.',
+                    ]);
+                }
             }
 
             $evaluation = Evaluation::query()->create([
@@ -105,18 +168,63 @@ class EvaluationService
                 'started_at' => now(),
             ]);
 
-            foreach ($criteria as $criterion) {
-                EvaluationItem::query()->create([
-                    'evaluation_id' => $evaluation->id,
-                    'evaluation_criteria_id' => $criterion->id,
-                    'weight' => $criterion->default_weight ?? 0,
-                    'score' => null,
-                    'weighted_score' => null,
-                    'minimum_score' => $criterion->minimum_score,
-                    'maximum_score' => $criterion->maximum_score,
-                    'result' => EvaluationItemResult::PENDING,
-                ]);
+            if ($weights->isNotEmpty()) {
+                foreach ($weights as $weight) {
+                    $criterion = $weight->criteria;
+
+                    EvaluationItem::query()->create([
+                        'evaluation_id' => $evaluation->id,
+                        'evaluation_criteria_id' => $weight->evaluation_criteria_id,
+                        'weight' => $weight->weight,
+                        'score' => null,
+                        'weighted_score' => null,
+                        'minimum_score' => $weight->minimum_score
+                            ?? $criterion?->minimum_score,
+                        'maximum_score' => $weight->maximum_score
+                            ?? $criterion?->maximum_score,
+                        'result' => EvaluationItemResult::PENDING,
+                    ]);
+                }
+            } else {
+                foreach ($criteria as $criterion) {
+                    EvaluationItem::query()->create([
+                        'evaluation_id' => $evaluation->id,
+                        'evaluation_criteria_id' => $criterion->id,
+                        'weight' => $criterion->default_weight ?? 0,
+                        'score' => null,
+                        'weighted_score' => null,
+                        'minimum_score' => $criterion->minimum_score,
+                        'maximum_score' => $criterion->maximum_score,
+                        'result' => EvaluationItemResult::PENDING,
+                    ]);
+                }
             }
+
+            if ($proposalStatus === ProposalStatus::VERIFIED->value) {
+                $this->proposalWorkflowService->transition(
+                    proposal: $proposal,
+                    targetStatus: ProposalStatus::EVALUATION,
+                    actorId: $evaluatorId,
+                    reason: 'Evaluasi proposal dimulai.',
+                    notes: sprintf('Evaluation number: %s', $evaluation->evaluation_number),
+                );
+            }
+
+            $this->auditLogService->record(
+                action: 'evaluation.created',
+                module: 'evaluation',
+                entityType: Evaluation::class,
+                entityId: $evaluation->id,
+                newValues: [
+                    'proposal_id' => $proposal->id,
+                    'evaluator_id' => $evaluatorId,
+                    'evaluation_number' => $evaluation->evaluation_number,
+                    'status' => $evaluation->status?->value ?? $evaluation->status,
+                ],
+                metadata: [
+                    'proposal_number' => $proposal->proposal_number,
+                ],
+            );
 
             return $evaluation->load([
                 'proposal',
@@ -138,7 +246,7 @@ class EvaluationService
             ]);
         }
 
-        if ($item->evaluation_id !== $evaluation->id) {
+        if ((string) $item->evaluation_id !== (string) $evaluation->id) {
             throw ValidationException::withMessages([
                 'item' => 'Item evaluasi tidak sesuai dengan evaluasi ini.',
             ]);
@@ -153,36 +261,68 @@ class EvaluationService
 
         $minimum = $item->minimum_score !== null
             ? (float) $item->minimum_score
-            : null;
+            : 0.0;
 
         $maximum = $item->maximum_score !== null
             ? (float) $item->maximum_score
-            : null;
+            : 100.0;
 
-        if ($minimum !== null && $score < $minimum) {
+        if ($score < $minimum || $score > $maximum) {
             throw ValidationException::withMessages([
-                'score' => "Nilai tidak boleh kurang dari {$minimum}.",
+                'score' => "Nilai harus berada pada rentang {$minimum} sampai {$maximum}.",
             ]);
         }
 
-        if ($maximum !== null && $score > $maximum) {
-            throw ValidationException::withMessages([
-                'score' => "Nilai tidak boleh lebih dari {$maximum}.",
-            ]);
-        }
+        $oldValues = [
+            'score' => $item->score,
+            'weighted_score' => $item->weighted_score,
+            'result' => $item->result instanceof \BackedEnum ? $item->result->value : $item->result,
+            'notes' => $item->notes,
+        ];
 
         $weight = (float) ($item->weight ?? 0);
-        $weightedScore = $score * $weight;
+
+        $maximumForCalculation = $maximum > 0
+            ? $maximum
+            : 100.0;
+
+        $weightedScore = round(
+            ($score / $maximumForCalculation) * $weight,
+            4,
+        );
+
+        $resolvedResult = $score >= $minimum
+            ? EvaluationItemResult::PASS
+            : EvaluationItemResult::FAIL;
 
         $item->update([
             'score' => $score,
             'weighted_score' => $weightedScore,
-            'result' => EvaluationItemResult::PASS,
+            'result' => $resolvedResult,
             'notes' => $notes,
             'scored_at' => now(),
         ]);
 
         $this->recalculate($evaluation);
+
+        $this->auditLogService->record(
+            action: 'evaluation.item_updated',
+            module: 'evaluation',
+            entityType: EvaluationItem::class,
+            entityId: $item->id,
+            oldValues: $oldValues,
+            newValues: [
+                'score' => $item->score,
+                'weighted_score' => $item->weighted_score,
+                'result' => $resolvedResult->value,
+                'notes' => $item->notes,
+                'scored_at' => $item->scored_at?->toISOString(),
+            ],
+            metadata: [
+                'evaluation_id' => $evaluation->id,
+                'criteria_id' => $item->evaluation_criteria_id,
+            ],
+        );
 
         return $evaluation->fresh([
             'proposal',
@@ -208,7 +348,7 @@ class EvaluationService
             $summary,
             $notes,
         ): Evaluation {
-            $evaluation->load('items');
+            $evaluation->load(['items', 'proposal']);
 
             if ($evaluation->status?->isFinal()) {
                 throw ValidationException::withMessages([
@@ -218,8 +358,9 @@ class EvaluationService
 
             $pendingItems = $evaluation->items
                 ->filter(
-                    fn (EvaluationItem $item): bool => $item->result === null ||
-                        $item->result === EvaluationItemResult::PENDING
+                    fn (EvaluationItem $item): bool => $item->score === null
+                        || $item->result === null
+                        || $item->result === EvaluationItemResult::PENDING,
                 );
 
             if ($pendingItems->isNotEmpty()) {
@@ -246,6 +387,61 @@ class EvaluationService
                 'completed_at' => now(),
             ]);
 
+            $proposal = $evaluation->proposal;
+            if ($proposal !== null) {
+                $proposalStatus = $proposal->status instanceof \BackedEnum
+                    ? $proposal->status->value
+                    : (string) $proposal->status;
+
+                if ($proposalStatus === ProposalStatus::VERIFIED->value) {
+                    $this->proposalWorkflowService->transition(
+                        proposal: $proposal,
+                        targetStatus: ProposalStatus::EVALUATION,
+                        actorId: (string) auth()->id(),
+                        reason: 'Memulai evaluasi proposal.',
+                    );
+                    $proposalStatus = ProposalStatus::EVALUATION->value;
+                }
+
+                if ($proposalStatus === ProposalStatus::EVALUATION->value) {
+                    $targetStatus = $result === EvaluationResult::RECOMMENDED
+                        ? ProposalStatus::RECOMMENDED
+                        : ProposalStatus::REJECTED;
+
+                    $this->proposalWorkflowService->transition(
+                        proposal: $proposal,
+                        targetStatus: $targetStatus,
+                        actorId: (string) auth()->id(),
+                        reason: $result === EvaluationResult::RECOMMENDED
+                            ? 'Evaluasi selesai dan proposal direkomendasikan.'
+                            : 'Evaluasi selesai dan proposal tidak direkomendasikan.',
+                        notes: sprintf('Evaluation ID: %s; Final Score: %s', $evaluation->id, $finalScore),
+                    );
+                }
+            }
+
+            $this->auditLogService->record(
+                action: 'evaluation.completed',
+                module: 'evaluation',
+                entityType: Evaluation::class,
+                entityId: $evaluation->id,
+                oldValues: [
+                    'status' => EvaluationStatus::IN_PROGRESS->value,
+                    'result' => EvaluationResult::PENDING->value,
+                ],
+                newValues: [
+                    'status' => EvaluationStatus::COMPLETED->value,
+                    'result' => $result->value,
+                    'total_score' => $evaluation->total_score,
+                    'final_score' => $evaluation->final_score,
+                    'summary' => $summary,
+                    'completed_at' => $evaluation->completed_at?->toISOString(),
+                ],
+                metadata: [
+                    'proposal_id' => $evaluation->proposal_id,
+                ],
+            );
+
             return $evaluation->fresh([
                 'proposal',
                 'evaluator:id,name,email',
@@ -254,38 +450,102 @@ class EvaluationService
         });
     }
 
-    public function recalculate(Evaluation $evaluation): Evaluation
+    public function delete(Evaluation $evaluation): void
     {
-        $evaluation->loadMissing('items');
+        if ($evaluation->status?->isFinal()) {
+            throw ValidationException::withMessages([
+                'evaluation' => 'Evaluasi yang sudah final tidak dapat dihapus.',
+            ]);
+        }
 
-        $items = $evaluation->items;
+        $this->database->transaction(function () use ($evaluation): void {
+            $evaluationId = $evaluation->id;
+            $oldValues = [
+                'proposal_id' => $evaluation->proposal_id,
+                'evaluator_id' => $evaluation->evaluator_id,
+                'evaluation_number' => $evaluation->evaluation_number,
+                'status' => $evaluation->status?->value ?? $evaluation->status,
+            ];
 
-        $totalScore = (float) $items->sum(
-            fn (EvaluationItem $item): float => (float) ($item->score ?? 0)
-        );
+            $evaluation->items()->delete();
+            $evaluation->delete();
 
-        $weightedTotal = (float) $items->sum(
-            fn (EvaluationItem $item): float => (float) ($item->weighted_score ?? 0)
-        );
-
-        $totalWeight = (float) $items->sum(
-            fn (EvaluationItem $item): float => (float) ($item->weight ?? 0)
-        );
-
-        $finalScore = $totalWeight > 0
-            ? $weightedTotal / $totalWeight
-            : 0;
-
-        $evaluation->update([
-            'total_score' => $totalScore,
-            'final_score' => $finalScore,
-        ]);
-
-        return $evaluation->fresh();
+            $this->auditLogService->record(
+                action: 'evaluation.deleted',
+                module: 'evaluation',
+                entityType: Evaluation::class,
+                entityId: $evaluationId,
+                oldValues: $oldValues,
+            );
+        });
     }
 
-    private function generateEvaluationNumber(Proposal $proposal): string
+    public function recalculate(Evaluation $evaluation): Evaluation
     {
+        return $this->database->transaction(function () use (
+            $evaluation,
+        ): Evaluation {
+            $evaluation->loadMissing('items');
+
+            $totalScore = 0.0;
+            $finalScore = 0.0;
+
+            foreach ($evaluation->items as $item) {
+                if ($item->score === null) {
+                    continue;
+                }
+
+                $score = (float) $item->score;
+                $weight = (float) ($item->weight ?? 0);
+
+                $minimumScore = $item->minimum_score !== null
+                    ? (float) $item->minimum_score
+                    : 0.0;
+
+                $maximumScore = $item->maximum_score !== null
+                    ? (float) $item->maximum_score
+                    : 100.0;
+
+                if ($maximumScore <= 0) {
+                    throw ValidationException::withMessages([
+                        'evaluation' => 'Nilai maksimum kriteria evaluasi harus lebih besar dari nol.',
+                    ]);
+                }
+
+                $weightedScore = round(
+                    ($score / $maximumScore) * $weight,
+                    4,
+                );
+
+                $resolvedResult = $score >= $minimumScore
+                    ? EvaluationItemResult::PASS
+                    : EvaluationItemResult::FAIL;
+
+                $item->forceFill([
+                    'weighted_score' => $weightedScore,
+                    'result' => $resolvedResult,
+                ])->save();
+
+                $totalScore += $score;
+                $finalScore += $weightedScore;
+            }
+
+            $evaluation->forceFill([
+                'total_score' => round($totalScore, 4),
+                'final_score' => round($finalScore, 4),
+            ])->save();
+
+            return $evaluation->fresh([
+                'proposal',
+                'evaluator:id,name,email',
+                'items.criteria',
+            ]);
+        });
+    }
+
+    private function generateEvaluationNumber(
+        Proposal $proposal,
+    ): string {
         $prefix = 'EVAL-'.now()->format('Ymd');
 
         $count = Evaluation::query()
