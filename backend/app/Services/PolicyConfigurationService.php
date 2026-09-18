@@ -7,6 +7,7 @@ use App\Models\GrantProgram;
 use App\Models\PolicyConfiguration;
 use App\Models\PolicyVersion;
 use App\Models\RankingRuleConfiguration;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -233,5 +234,140 @@ class PolicyConfigurationService
                 ]);
             }
         }
+    }
+
+    /**
+     * Create a new draft policy version.
+     *
+     * @throws ValidationException
+     */
+    public function createDraftVersion(
+        PolicyConfiguration $configuration,
+        array $data,
+        User $actor
+    ): PolicyVersion {
+        $versionNumber = $data['version_number'] ?? sprintf('v%s.%d', now()->format('Y'), $configuration->versions()->count() + 1);
+
+        $exists = $configuration->versions()->where('version_number', $versionNumber)->exists();
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'version_number' => "Nomor versi '{$versionNumber}' sudah digunakan pada konfigurasi kebijakan ini.",
+            ]);
+        }
+
+        $version = $configuration->versions()->create([
+            'version_number' => $versionNumber,
+            'configuration_data' => $data['configuration_data'] ?? [],
+            'status' => 'draft',
+            'effective_from' => $data['effective_from'] ?? now(),
+            'effective_until' => $data['effective_until'] ?? null,
+            'created_by' => $actor->id,
+        ]);
+
+        app(AuditLogService::class)->record(
+            action: 'policy_version.created',
+            module: 'policy_governance',
+            entityType: PolicyVersion::class,
+            entityId: $version->id,
+            newValues: [
+                'policy_configuration_id' => $configuration->id,
+                'version_number' => $versionNumber,
+                'status' => 'draft',
+            ],
+            metadata: ['actor_id' => $actor->id]
+        );
+
+        return $version;
+    }
+
+    /**
+     * Approve a draft policy version using strict Maker-Checker rule.
+     * Creator cannot approve their own version.
+     *
+     * @throws ValidationException
+     */
+    public function approveVersion(
+        PolicyVersion $version,
+        User $actor,
+        ?string $notes = null
+    ): PolicyVersion {
+        if ($version->status !== 'draft') {
+            throw ValidationException::withMessages([
+                'status' => 'Hanya versi kebijakan berstatus draft yang dapat disetujui.',
+            ]);
+        }
+
+        // Maker-checker enforcement
+        if ($version->created_by === $actor->id) {
+            throw ValidationException::withMessages([
+                'approved_by' => 'Pembuat draft kebijakan dilarang menyetujui versinya sendiri (prinsip Maker-Checker).',
+            ]);
+        }
+
+        $version->update([
+            'status' => 'approved',
+            'approved_by' => $actor->id,
+            'approved_at' => now(),
+            'approval_notes' => $notes,
+        ]);
+
+        app(AuditLogService::class)->record(
+            action: 'policy_version.approved',
+            module: 'policy_governance',
+            entityType: PolicyVersion::class,
+            entityId: $version->id,
+            newValues: [
+                'status' => 'approved',
+                'approved_by' => $actor->id,
+                'approval_notes' => $notes,
+            ],
+            metadata: ['actor_id' => $actor->id]
+        );
+
+        return $version;
+    }
+
+    /**
+     * Activate an approved policy version and supersede previously active versions.
+     *
+     * @throws ValidationException
+     */
+    public function activateVersion(
+        PolicyVersion $version,
+        User $actor
+    ): PolicyVersion {
+        if ($version->status !== 'approved') {
+            throw ValidationException::withMessages([
+                'status' => 'Hanya versi kebijakan yang telah disetujui yang dapat diaktifkan.',
+            ]);
+        }
+
+        // Mark previous approved/active versions as superseded
+        $config = $version->configuration ?? PolicyConfiguration::find($version->policy_configuration_id);
+        if ($config) {
+            $config->versions()
+                ->where('id', '!=', $version->id)
+                ->whereIn('status', ['approved', 'active'])
+                ->update(['status' => 'superseded']);
+        }
+
+        $version->update([
+            'status' => 'active',
+            'effective_from' => $version->effective_from ?: now(),
+        ]);
+
+        app(AuditLogService::class)->record(
+            action: 'policy_version.activated',
+            module: 'policy_governance',
+            entityType: PolicyVersion::class,
+            entityId: $version->id,
+            newValues: [
+                'status' => 'active',
+                'effective_from' => $version->effective_from,
+            ],
+            metadata: ['actor_id' => $actor->id]
+        );
+
+        return $version;
     }
 }

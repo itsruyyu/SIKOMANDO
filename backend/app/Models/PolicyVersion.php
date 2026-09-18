@@ -40,6 +40,11 @@ class PolicyVersion extends Model
         );
     }
 
+    public function policyConfiguration(): BelongsTo
+    {
+        return $this->configuration();
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

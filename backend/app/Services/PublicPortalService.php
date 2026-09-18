@@ -332,7 +332,7 @@ class PublicPortalService
         $completedLpjs = (int) DB::table('lpj_submissions as l')
             ->join('proposals as p', 'p.id', '=', 'l.proposal_id')
             ->where('p.grant_program_id', $program->id)
-            ->whereIn('l.status', ['approved', 'finalized'])
+            ->whereIn('l.status', ['approved', 'finalized', 'closed'])
             ->count();
 
         return [

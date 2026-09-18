@@ -4,15 +4,18 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AssignmentController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DecisionController;
 use App\Http\Controllers\Api\V1\DisbursementController;
 use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\V1\FieldSurveyController;
 use App\Http\Controllers\Api\V1\GrantProgramController;
+use App\Http\Controllers\Api\V1\HealthCheckController;
 use App\Http\Controllers\Api\V1\InternalDashboardController;
 use App\Http\Controllers\Api\V1\LpjController;
 use App\Http\Controllers\Api\V1\PdfDocumentController;
+use App\Http\Controllers\Api\V1\PolicyConfigurationController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\ProposalDocumentController;
 use App\Http\Controllers\Api\V1\Public\PublicAnnouncementController;
@@ -62,7 +65,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/transparency/{grantProgram}', [PublicTransparencyController::class, 'show'])->name('public.transparency.show');
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
+    // Health Check Endpoint
+    Route::get('/health', [HealthCheckController::class, 'check'])->name('v1.health');
+
+    Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
         Route::get('/auth/me', [
             AuthController::class,
             'me',
@@ -439,5 +445,27 @@ Route::prefix('v1')->group(function () {
                 Route::get('/disbursements/{disbursement}', 'generateDisbursementPdf')->name('pdf.disbursement');
                 Route::get('/lpj/{lpj}', 'generateLpjPdf')->name('pdf.lpj');
             });
+
+        // Internal Audit Logs (Super Admin, Admin, Auditor)
+        Route::prefix('internal/audit-logs')
+            ->controller(AuditLogController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('internal.audit-logs.index');
+                Route::get('/{auditLog}', 'show')->name('internal.audit-logs.show');
+            });
+
+        // Policy & Configuration Governance
+        Route::prefix('policy-configurations')
+            ->controller(PolicyConfigurationController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('policy-configurations.index');
+                Route::get('/{code}/versions', 'versionHistory')->name('policy-configurations.versions');
+                Route::post('/{code}/versions', 'storeVersion')->name('policy-configurations.versions.store');
+                Route::post('/versions/{policyVersion}/approve', 'approveVersion')->name('policy-configurations.versions.approve');
+                Route::post('/versions/{policyVersion}/activate', 'activateVersion')->name('policy-configurations.versions.activate');
+            });
     });
 });
+
+// Root API Health Check (alias for /api/health)
+Route::get('/health', [HealthCheckController::class, 'check'])->name('api.health');

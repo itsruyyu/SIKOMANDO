@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: SIKOMANDO API
+  description: Sistem Informasi Komprehensif Manajemen Digitalisasi Hibah Organisasi - REST API v1
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Development Server
+  - url: https://sikomando.example.go.id/api/v1
+    description: Production Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  schemas:
+    StandardSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operasi berhasil dijalankan.
+        data:
+          type: object
+        meta:
+          type: object
+
+    StandardErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Pesan error.
+        errors:
+          type: object
+
+paths:
+  /health:
+    get:
+      summary: Health Check Sistem
+      description: Memeriksa ketersediaan database, cache, dan storage.
+      responses:
+        '200':
+          description: Sistem Sehat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardSuccessResponse'
+        '503':
+          description: Layanan Mengalami Kendala
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardSuccessResponse'
+
+  /auth/login:
+    post:
+      summary: Login Pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login Berhasil
+        '422':
+          description: Validasi Gagal
+
+  /auth/me:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Profil Pengguna Login
+      responses:
+        '200':
+          description: Berhasil
+
+  /auth/logout:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Logout Pengguna (Revoke Token)
+      responses:
+        '200':
+          description: Logout Berhasil
+
+  /users:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Daftar Pengguna (Super Admin & Admin)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Berhasil
+    post:
+      security:
+        - bearerAuth: []
+      summary: Pembuatan Pengguna Baru (Super Admin)
+      responses:
+        '201':
+          description: Dibuat
+
+  /assignments:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Daftar Penugasan Internal
+      responses:
+        '200':
+          description: Berhasil
+    post:
+      security:
+        - bearerAuth: []
+      summary: Buat Penugasan Proposal Baru
+      responses:
+        '201':
+          description: Dibuat
+
+  /proposals:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Daftar Usulan Proposal
+      responses:
+        '200':
+          description: Berhasil
+    post:
+      security:
+        - bearerAuth: []
+      summary: Buat Usulan Proposal
+      responses:
+        '201':
+          description: Dibuat
+
+  /internal/audit-logs:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Audit Log Internal Terperinci
+      parameters:
+        - name: module
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Berhasil
+        '403':
+          description: Hak Akses Ditolak
+
+  /policy-configurations:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Daftar Konfigurasi Kebijakan & Versi
+      responses:
+        '200':
+          description: Berhasil
+
+  /public/grant-programs:
+    get:
+      summary: Daftar Program Hibah Aktif (Publik)
+      responses:
+        '200':
+          description: Berhasil
+
+  /public/statistics:
+    get:
+      summary: Statistik Agregat Publik
+      responses:
+        '200':
+          description: Berhasil
+
