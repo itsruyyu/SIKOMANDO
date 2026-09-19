@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Decision extends Model
 {
-    use HasFactory, HasUuid;
     use HasFactory, HasQrIdentity, HasUuid;
 
     protected $fillable = [
@@ -62,6 +61,11 @@ class Decision extends Model
     public function issuer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');
+    }
+
+    public function decider(): BelongsTo
+    {
+        return $this->issuer();
     }
 
     public function canceller(): BelongsTo

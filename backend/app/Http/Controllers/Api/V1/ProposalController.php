@@ -94,6 +94,15 @@ class ProposalController extends Controller
             requestId: $request->header('X-Request-ID'),
         );
 
+        if (! empty($validated['budget_items'])) {
+            app(\App\Services\ProposalBudgetService::class)->replaceItems(
+                $proposal,
+                $validated['budget_items'],
+                $request->header('X-Request-ID')
+            );
+            $proposal->refresh();
+        }
+
         $proposal->load([
             'grantProgram',
             'organization',

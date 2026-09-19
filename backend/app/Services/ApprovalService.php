@@ -31,7 +31,7 @@ class ApprovalService
     {
         $query = Approval::query()
             ->with([
-                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,status',
+                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,approved_amount,status',
                 'proposal.organization:id,name',
                 'proposal.grantProgram:id,code,name,fiscal_year',
                 'recommendation:id,recommendation_number,status,result,recommended_amount',
@@ -59,7 +59,7 @@ class ApprovalService
     {
         return Approval::query()
             ->with([
-                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,status',
+                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,approved_amount,status',
                 'proposal.organization:id,name',
                 'proposal.grantProgram:id,code,name,fiscal_year',
                 'recommendation:id,recommendation_number,status,result,recommended_amount,summary,reason',
@@ -266,6 +266,8 @@ class ApprovalService
                 ? (float) $data['approved_amount']
                 : (float) ($approval->recommendation?->recommended_amount ?: $proposal->requested_amount);
 
+            $proposal->update(['approved_amount' => $approvedAmount]);
+
             $decision = Decision::create([
                 'proposal_id' => $proposal->id,
                 'approval_id' => $approval->id,
@@ -407,7 +409,7 @@ class ApprovalService
     {
         $query = Decision::query()
             ->with([
-                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,status',
+                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,approved_amount,status',
                 'proposal.organization:id,name',
                 'proposal.grantProgram:id,code,name,fiscal_year',
                 'issuer:id,name,email',
@@ -439,7 +441,7 @@ class ApprovalService
     {
         return Decision::query()
             ->with([
-                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,status',
+                'proposal:id,proposal_number,title,applicant_id,organization_id,grant_program_id,requested_amount,approved_amount,status',
                 'proposal.organization:id,name',
                 'proposal.grantProgram:id,code,name,fiscal_year',
                 'approval.actions.actor:id,name,email',

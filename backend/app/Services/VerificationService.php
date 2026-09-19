@@ -29,10 +29,17 @@ class VerificationService
                 'grantProgram.documentRequirements.documentType',
             ]);
 
-            if ($proposal->status !== ProposalStatus::VERIFICATION) {
+            if ($proposal->status === ProposalStatus::SUBMITTED) {
+                $proposal = $this->workflowService->transition(
+                    proposal: $proposal,
+                    targetStatus: ProposalStatus::VERIFICATION,
+                    actorId: $verifierId,
+                    reason: 'Mulai proses verifikasi administrasi dokumen.',
+                );
+            } elseif ($proposal->status !== ProposalStatus::VERIFICATION) {
                 throw ValidationException::withMessages([
                     'proposal' => [
-                        'Proposal harus berada pada status verification.',
+                        'Proposal harus berada pada status submitted atau verification.',
                     ],
                 ]);
             }
@@ -42,6 +49,10 @@ class VerificationService
                 ->first();
 
             if ($existing !== null) {
+                if ($existing->items()->count() === 0) {
+                    $this->populateVerificationItems($existing, $proposal);
+                }
+
                 return $existing->load('items');
             }
 
@@ -52,31 +63,7 @@ class VerificationService
                 'started_at' => now(),
             ]);
 
-            $requirements = $proposal->grantProgram
-                ->documentRequirements()
-                ->with(['requirement', 'documentType'])
-                ->where('scope', 'proposal')
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get();
-
-            foreach ($requirements as $documentRequirement) {
-                $requirementName = $documentRequirement->requirement?->name
-                    ?? $documentRequirement->documentType?->name
-                    ?? 'Persyaratan dokumen';
-
-                $requirementCode = $documentRequirement->requirement?->code
-                    ?? $documentRequirement->documentType?->code;
-
-                $verification->items()->create([
-                    'requirement_id' => $documentRequirement->requirement_id,
-                    'document_type_id' => $documentRequirement->document_type_id,
-                    'item_code' => $requirementCode,
-                    'item_name' => $requirementName,
-                    'result' => VerificationItemResult::PENDING->value,
-                ]);
-            }
+            $this->populateVerificationItems($verification, $proposal);
 
             $this->auditLogService->record(
                 action: 'verification.created',
@@ -165,7 +152,12 @@ class VerificationService
     public function complete(Verification $verification): Verification
     {
         return DB::transaction(function () use ($verification): Verification {
-            $verification->loadMissing('items');
+            $verification->loadMissing(['items', 'proposal.grantProgram']);
+
+            if ($verification->items->isEmpty()) {
+                $this->populateVerificationItems($verification, $verification->proposal);
+                $verification->load('items');
+            }
 
             $statusValue = $verification->status instanceof \BackedEnum
                 ? $verification->status->value
@@ -253,6 +245,69 @@ class VerificationService
 
             return $verification->refresh()->load('items');
         });
+    }
+
+    public function populateVerificationItems(Verification $verification, Proposal $proposal): void
+    {
+        $requirements = $proposal->grantProgram
+            ?->documentRequirements()
+            ->with(['requirement', 'documentType'])
+            ->where(function ($q) {
+                $q->where('scope', 'proposal')
+                    ->orWhereNull('scope');
+            })
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        if ($requirements && $requirements->isNotEmpty()) {
+            foreach ($requirements as $documentRequirement) {
+                $requirementName = $documentRequirement->requirement?->name
+                    ?? $documentRequirement->documentType?->name
+                    ?? 'Persyaratan dokumen';
+
+                $requirementCode = $documentRequirement->requirement?->code
+                    ?? $documentRequirement->documentType?->code;
+
+                $verification->items()->create([
+                    'requirement_id' => $documentRequirement->requirement_id,
+                    'document_type_id' => $documentRequirement->document_type_id,
+                    'item_code' => $requirementCode,
+                    'item_name' => $requirementName,
+                    'result' => VerificationItemResult::PENDING->value,
+                ]);
+            }
+        } else {
+            $systemReqs = \App\Models\Requirement::where('is_active', true)->get();
+            if ($systemReqs->isNotEmpty()) {
+                foreach ($systemReqs as $sr) {
+                    $verification->items()->create([
+                        'requirement_id' => $sr->id,
+                        'document_type_id' => null,
+                        'item_code' => $sr->code,
+                        'item_name' => $sr->name,
+                        'result' => VerificationItemResult::PENDING->value,
+                    ]);
+                }
+            } else {
+                $defaults = [
+                    ['code' => 'REQ-ADM-01', 'name' => 'Surat Permohonan Hibah kepada Gubernur c.q. Kepala Biro Kesra'],
+                    ['code' => 'REQ-ADM-02', 'name' => 'Akta Notaris & Pengesahan Kemenkumham'],
+                    ['code' => 'REQ-ADM-03', 'name' => 'Nomor Pokok Wajib Pajak (NPWP) Lembaga Pemohon'],
+                    ['code' => 'REQ-ADM-04', 'name' => 'Surat Keterangan Domisili Sekretariat Resmi'],
+                    ['code' => 'REQ-ADM-05', 'name' => 'Rincian Anggaran Biaya (RAB) Terperinci & Wajar'],
+                    ['code' => 'REQ-ADM-06', 'name' => 'Surat Pernyataan Tanggung Jawab Mutlak (SPTJM) bermaterai'],
+                ];
+                foreach ($defaults as $def) {
+                    $verification->items()->create([
+                        'item_code' => $def['code'],
+                        'item_name' => $def['name'],
+                        'result' => VerificationItemResult::PENDING->value,
+                    ]);
+                }
+            }
+        }
     }
 
     private function generateNumber(Proposal $proposal): string

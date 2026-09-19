@@ -67,10 +67,12 @@ class ProposalResource extends JsonResource
                     'category' => $item->category,
                     'item_name' => $item->item_name,
                     'description' => $item->description,
+                    'specification' => $item->description,
                     'quantity' => $item->quantity,
                     'unit' => $item->unit,
                     'unit_price' => $item->unit_price,
                     'subtotal' => $item->subtotal,
+                    'total_price' => $item->subtotal,
                     'sort_order' => $item->sort_order,
                 ])->values()
             ),
@@ -87,6 +89,16 @@ class ProposalResource extends JsonResource
                     'status' => $document->status,
                 ])->values()
             ),
+
+            'qr' => ($qr = \App\Models\QrIdentity::where('qrable_type', get_class($this->resource))
+                ->where('qrable_id', $this->id)
+                ->where('status', \App\Enums\QrStatus::ACTIVE)
+                ->first()) ? [
+                'id' => $qr->id,
+                'token' => $qr->token,
+                'svg_url' => asset('storage/' . $qr->qr_code_path),
+                'verification_url' => $qr->verification_url,
+            ] : null,
         ];
     }
 }

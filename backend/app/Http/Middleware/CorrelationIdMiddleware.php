@@ -25,6 +25,14 @@ class CorrelationIdMiddleware
             $requestId = (string) Str::uuid();
         }
 
+        // Support token query parameter for direct browser PDF downloads/new tabs
+        if (! $request->headers->has('Authorization')) {
+            $queryToken = $request->query('token') ?: $request->query('bearer');
+            if ($queryToken && is_string($queryToken)) {
+                $request->headers->set('Authorization', 'Bearer ' . $queryToken);
+            }
+        }
+
         // Attach to request attributes
         $request->attributes->set('request_id', $requestId);
 

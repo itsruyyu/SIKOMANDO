@@ -130,7 +130,8 @@ class FieldSurveyPolicy
 
     public function complete(User $user, FieldSurvey $fieldSurvey): bool
     {
-        return $this->isAdministrator($user);
+        return $this->isAdministrator($user)
+            || ($this->isSurveyor($user) && (string) $fieldSurvey->surveyor_id === (string) $user->id);
     }
 
     public function delete(User $user, FieldSurvey $fieldSurvey): bool

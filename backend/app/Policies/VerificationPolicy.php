@@ -10,9 +10,13 @@ class VerificationPolicy
 {
     public function create(User $user, Proposal $proposal): bool
     {
+        $status = $proposal->status instanceof \BackedEnum
+            ? $proposal->status->value
+            : (string) $proposal->status;
+
         return $user->is_active
             && $this->hasVerificationRole($user)
-            && $proposal->status?->value === 'verification';
+            && in_array($status, ['submitted', 'verification'], true);
     }
 
     public function view(User $user, Verification $verification): bool
@@ -43,9 +47,11 @@ class VerificationPolicy
             ? $verification->status->value
             : (string) $verification->status;
 
+        $isAuthorizedUser = $this->hasAdministrativeRole($user)
+            || ($this->hasVerificationRole($user) && ($verification->verifier_id === $user->id || $verification->verifier_id === null));
+
         return $user->is_active
-            && $this->hasVerificationRole($user)
-            && $verification->verifier_id === $user->id
+            && $isAuthorizedUser
             && $statusValue === 'in_progress';
     }
 

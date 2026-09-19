@@ -12,6 +12,15 @@ class StoreUserRequest extends FormRequest
         return $this->user()?->can('create', User::class) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('role') && ! $this->filled('roles')) {
+            $this->merge([
+                'roles' => [$this->input('role')],
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -20,6 +29,7 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'string', 'min:8'],
             'phone' => ['nullable', 'string', 'max:20'],
             'is_active' => ['nullable', 'boolean'],
+            'role' => ['nullable', 'string', 'exists:roles,code'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'exists:roles,code'],
         ];

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class QrService
 {
@@ -567,55 +568,20 @@ class QrService
      */
     protected function generateSvgQrContent(string $url, string $token): string
     {
-        $hash = md5($token);
-        $size = 240;
-        $modules = 25;
-        $cellSize = $size / $modules;
+        try {
+            return (string) QrCode::format('svg')
+                ->size(240)
+                ->margin(1)
+                ->errorCorrection('M')
+                ->generate($url);
+        } catch (\Throwable $e) {
+            $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(240, 1),
+                new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+            );
+            $writer = new \BaconQrCode\Writer($renderer);
 
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="'.$size.'" height="'.$size.'" viewBox="0 0 '.$size.' '.$size.'">';
-        $svg .= '<rect width="100%" height="100%" fill="#ffffff"/>';
-
-        // Finder patterns (top-left, top-right, bottom-left)
-        $finderSize = 7 * $cellSize;
-        $finders = [
-            [0, 0],
-            [($modules - 7) * $cellSize, 0],
-            [0, ($modules - 7) * $cellSize],
-        ];
-
-        foreach ($finders as [$fx, $fy]) {
-            // Outer black
-            $svg .= '<rect x="'.$fx.'" y="'.$fy.'" width="'.$finderSize.'" height="'.$finderSize.'" fill="#1e293b"/>';
-            // Inner white
-            $svg .= '<rect x="'.($fx + $cellSize).'" y="'.($fy + $cellSize).'" width="'.(5 * $cellSize).'" height="'.(5 * $cellSize).'" fill="#ffffff"/>';
-            // Center black
-            $svg .= '<rect x="'.($fx + 2 * $cellSize).'" y="'.($fy + 2 * $cellSize).'" width="'.(3 * $cellSize).'" height="'.(3 * $cellSize).'" fill="#1e293b"/>';
+            return $writer->writeString($url);
         }
-
-        // Pseudo-random data modules derived deterministically from token hash
-        for ($r = 0; $r < $modules; $r++) {
-            for ($c = 0; $c < $modules; $c++) {
-                // Skip finder areas
-                $inTl = ($r < 7 && $c < 7);
-                $inTr = ($r < 7 && $c >= $modules - 7);
-                $inBl = ($r >= $modules - 7 && $c < 7);
-                if ($inTl || $inTr || $inBl) {
-                    continue;
-                }
-
-                $idx = ($r * $modules + $c) % strlen($hash);
-                $isDark = (hexdec($hash[$idx]) + $r + $c) % 2 === 0;
-
-                if ($isDark) {
-                    $x = $c * $cellSize;
-                    $y = $r * $cellSize;
-                    $svg .= '<rect x="'.$x.'" y="'.$y.'" width="'.$cellSize.'" height="'.$cellSize.'" fill="#1e293b"/>';
-                }
-            }
-        }
-
-        $svg .= '</svg>';
-
-        return $svg;
     }
 }

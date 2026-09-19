@@ -75,5 +75,34 @@
     </tfoot>
 </table>
 @endif
+
+<div class="signature-section" style="margin-top: 30px;">
+    <table style="width: 100%;">
+        <tr>
+            <td style="width: 55%; vertical-align: bottom;">
+                @if(isset($qr) && $qr)
+                    <div style="border: 1px solid #cbd5e0; padding: 8px; border-radius: 6px; width: 230px; background-color: #f7fafc;">
+                        <p style="font-size: 8pt; font-weight: bold; margin: 0 0 4px 0; color: #2d3748;">
+                            Verifikasi Keabsahan Usulan
+                        </p>
+                        <p style="font-size: 7.5pt; color: #4a5568; margin: 0 0 4px 0;">
+                            Dokumen terdaftar resmi di Portal SIKOMANDO Pemprov Sulawesi Utara.
+                        </p>
+                        <p style="font-size: 7pt; font-family: monospace; color: #2b6cb0; margin: 0; word-break: break-all;">
+                            Token: {{ substr($qr->token, 0, 24) }}...
+                        </p>
+                    </div>
+                @endif
+            </td>
+            <td style="width: 45%; vertical-align: top; text-align: center;">
+                <p style="margin: 0; font-size: 8.5pt;">Sulawesi Utara, {{ now()->format('d F Y') }}</p>
+                <p style="font-weight: bold; font-size: 8.5pt; margin: 4px 0 0 0;">Lembaga Pemohon,</p>
+                <p style="font-size: 8pt; color: #718096; margin: 0 0 35px 0;">{{ $proposal->organization?->name ?? 'Pemohon' }}</p>
+                <p style="font-weight: bold; text-decoration: underline; margin: 0; font-size: 8.5pt;">{{ $proposal->applicant?->name ?? 'Ketua Lembaga' }}</p>
+                <p style="font-size: 7.5pt; color: #718096; margin: 0;">Ketua / Penanggung Jawab</p>
+            </td>
+        </tr>
+    </table>
+</div>
 @endsection
 

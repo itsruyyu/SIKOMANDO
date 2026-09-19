@@ -19,6 +19,18 @@ class UserResource extends JsonResource
                 'roles',
                 fn () => $this->roles->pluck('code')->values()
             ),
+            'organizations' => $this->whenLoaded(
+                'organizations',
+                fn () => $this->organizations->map(fn ($org) => [
+                    'id' => $org->id,
+                    'name' => $org->name,
+                    'registration_number' => $org->registration_number,
+                    'organization_type' => $org->organization_type,
+                    'email' => $org->email,
+                    'phone' => $org->phone,
+                    'address' => $org->address,
+                ])
+            ),
         ];
     }
 }

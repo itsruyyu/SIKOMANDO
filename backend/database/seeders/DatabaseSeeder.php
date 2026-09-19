@@ -10,9 +10,19 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolePermissionSeeder::class,
-            AdminUserSeeder::class,
+            RegionalSeeder::class,
+            ComprehensiveUserSeeder::class,
             MasterDataSeeder::class,
+            PolicyConfigurationSeeder::class,
+            GrantProgramSeeder::class,
             AnnouncementSeeder::class,
+            OrganizationSeeder::class,
+            ProposalLifecycleSeeder::class,
+            WorkflowEvidenceSeeder::class,
+            TraceabilityAndSignatureSeeder::class,
+            DisbursementAndRealizationSeeder::class,
+            LpjAndMonitoringSeeder::class,
+            AuditAndNotificationSeeder::class,
         ]);
     }
 }

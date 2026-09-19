@@ -19,7 +19,24 @@ apiClient.interceptors.request.use((config) => {
 })
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const payload = response.data;
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      payload.data &&
+      typeof payload.data === 'object' &&
+      Array.isArray(payload.data.data) &&
+      payload.data.meta
+    ) {
+      response.data = {
+        ...payload,
+        data: payload.data.data,
+        meta: payload.data.meta,
+      };
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('sikomando_token')

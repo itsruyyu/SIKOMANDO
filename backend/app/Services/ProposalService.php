@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\ProposalStatus;
+use App\Enums\QrType;
 use App\Models\GrantProgram;
 use App\Models\Organization;
 use App\Models\Proposal;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -77,6 +79,21 @@ class ProposalService
                 requestId: $requestId,
             );
 
+            try {
+                app(\App\Services\QrService::class)->generateFor(
+                    $proposal,
+                    QrType::PROPOSAL,
+                    User::find($applicantId),
+                    null,
+                    [
+                        'proposal_number' => $proposal->proposal_number,
+                        'applicant_id' => $applicantId,
+                    ]
+                );
+            } catch (\Throwable) {
+                // Non-blocking
+            }
+
             return $proposal;
         });
     }
@@ -121,6 +138,43 @@ class ProposalService
             ],
             requestId: $requestId,
         );
+
+        // Notify Evaluators, Verificators, and Super Admins
+        try {
+            $staffRecipients = User::query()
+                ->whereHas('roles', fn ($q) => $q->whereIn('code', [
+                    'SUPER_ADMIN',
+                    'ADMIN_SIKOMANDO',
+                    'VERIFIKATOR',
+                    'EVALUATOR',
+                ]))
+                ->where('is_active', true)
+                ->get();
+
+            if ($staffRecipients->isNotEmpty()) {
+                $this->notificationService->createForMany(
+                    recipients: $staffRecipients,
+                    type: 'proposal.submitted',
+                    title: 'Pengajuan Usulan Proposal Baru',
+                    message: sprintf(
+                        'Proposal baru "%s" (%s) telah diajukan oleh %s dan menunggu pemeriksaan berkas.',
+                        $submittedProposal->title,
+                        $submittedProposal->proposal_number,
+                        $proposal->organization?->name ?? 'Pemohon'
+                    ),
+                    entityType: Proposal::class,
+                    entityId: $submittedProposal->id,
+                    data: [
+                        'proposal_number' => $submittedProposal->proposal_number,
+                        'status' => ProposalStatus::SUBMITTED->value,
+                        'organization' => $proposal->organization?->name,
+                    ],
+                    requestId: $requestId,
+                );
+            }
+        } catch (\Throwable) {
+            // Non-blocking
+        }
 
         return $submittedProposal->fresh([
             'grantProgram',

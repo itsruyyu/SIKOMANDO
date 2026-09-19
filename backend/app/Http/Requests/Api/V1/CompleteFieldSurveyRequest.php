@@ -13,6 +13,18 @@ class CompleteFieldSurveyRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('result')) {
+            $recommendation = $this->input('recommendation');
+            $this->merge([
+                'result' => ($recommendation === 'rejected' || $recommendation === 'not_recommended')
+                    ? FieldSurveyResult::NOT_RECOMMENDED->value
+                    : FieldSurveyResult::RECOMMENDED->value,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
