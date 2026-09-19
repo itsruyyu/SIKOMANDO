@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProposalStatus;
+use App\Models\Concerns\HasQrIdentity;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Proposal extends Model
 {
     use HasFactory;
+    use HasQrIdentity;
     use HasUuid;
     use SoftDeletes;
 
@@ -173,5 +175,20 @@ class Proposal extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(ProposalAssignment::class);
+    }
+
+    public function realizationPackages(): HasMany
+    {
+        return $this->hasMany(RealizationPackage::class);
+    }
+
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
+    public function handovers(): HasMany
+    {
+        return $this->hasMany(Handover::class);
     }
 }

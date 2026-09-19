@@ -17,9 +17,11 @@ class AuditLogService
         array $newValues = [],
         array $metadata = [],
         ?string $requestId = null,
+        ?string $actorId = null,
     ): AuditLog {
         return AuditLog::create([
             'actor_id' => Auth::id(),
+            'actor_id' => $actorId ?: Auth::id(),
             'action' => $action,
             'module' => $module,
             'entity_type' => $entityType,

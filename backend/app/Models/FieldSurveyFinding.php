@@ -16,6 +16,8 @@ class FieldSurveyFinding extends Model
 
     protected $fillable = [
         'field_survey_id',
+        'realization_item_id',
+        'scanned_qr_token',
         'finding_code',
         'finding_type',
         'title',
@@ -38,5 +40,10 @@ class FieldSurveyFinding extends Model
     public function fieldSurvey(): BelongsTo
     {
         return $this->belongsTo(FieldSurvey::class);
+    }
+
+    public function realizationItem(): BelongsTo
+    {
+        return $this->belongsTo(RealizationItem::class, 'realization_item_id');
     }
 }

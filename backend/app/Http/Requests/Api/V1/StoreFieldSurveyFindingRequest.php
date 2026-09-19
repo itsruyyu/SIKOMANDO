@@ -41,6 +41,21 @@ class StoreFieldSurveyFindingRequest extends FormRequest
                 'string',
                 'max:5000',
             ],
+            'realization_item_id' => [
+                'nullable',
+                'uuid',
+                'exists:realization_items,id',
+            ],
+            'scanned_qr_token' => [
+                'nullable',
+                'string',
+                'max:64',
+            ],
+            'scanned_token' => [
+                'nullable',
+                'string',
+                'max:64',
+            ],
         ];
     }
 

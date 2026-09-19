@@ -21,6 +21,8 @@ class FieldSurveyFindingResource extends JsonResource
             'recommended_action' => $this->recommended_action,
             'status' => $this->status?->value,
             'status_label' => $this->status?->label(),
+            'realization_item_id' => $this->realization_item_id,
+            'scanned_qr_token' => $this->scanned_qr_token,
             'resolved_at' => $this->resolved_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

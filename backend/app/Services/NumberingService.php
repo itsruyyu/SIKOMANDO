@@ -58,6 +58,9 @@ class NumberingService
                 'approval' => 'APP',
                 'decision' => 'DEC',
                 'sk', 'decision_letter' => 'SK',
+                'realization_package' => 'PKG',
+                'receipt' => 'RCP',
+                'handover' => 'BAST',
                 default => strtoupper(substr($documentType, 0, 4)),
             };
 

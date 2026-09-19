@@ -7,23 +7,31 @@ use App\Http\Controllers\Api\V1\AssignmentController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DecisionController;
+use App\Http\Controllers\Api\V1\DigitalSignatureController;
 use App\Http\Controllers\Api\V1\DisbursementController;
 use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\V1\FieldSurveyController;
 use App\Http\Controllers\Api\V1\GrantProgramController;
+use App\Http\Controllers\Api\V1\HandoverController;
 use App\Http\Controllers\Api\V1\HealthCheckController;
 use App\Http\Controllers\Api\V1\InternalDashboardController;
 use App\Http\Controllers\Api\V1\LpjController;
+use App\Http\Controllers\Api\V1\MonitoringController;
 use App\Http\Controllers\Api\V1\PdfDocumentController;
 use App\Http\Controllers\Api\V1\PolicyConfigurationController;
 use App\Http\Controllers\Api\V1\ProposalController;
 use App\Http\Controllers\Api\V1\ProposalDocumentController;
 use App\Http\Controllers\Api\V1\Public\PublicAnnouncementController;
 use App\Http\Controllers\Api\V1\Public\PublicGrantProgramController;
+use App\Http\Controllers\Api\V1\Public\PublicQrVerificationController;
 use App\Http\Controllers\Api\V1\Public\PublicStatisticController;
 use App\Http\Controllers\Api\V1\Public\PublicTransparencyController;
+use App\Http\Controllers\Api\V1\QrManagementController;
 use App\Http\Controllers\Api\V1\RankingController;
+use App\Http\Controllers\Api\V1\RealizationController;
+use App\Http\Controllers\Api\V1\ReceiptController;
 use App\Http\Controllers\Api\V1\RevisionController;
+use App\Http\Controllers\Api\V1\SignatureProfileController;
 use App\Http\Controllers\Api\V1\UserManagementController;
 use App\Http\Controllers\Api\V1\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +71,11 @@ Route::prefix('v1')->group(function () {
         // Transparency
         Route::get('/transparency', [PublicTransparencyController::class, 'index'])->name('public.transparency.index');
         Route::get('/transparency/{grantProgram}', [PublicTransparencyController::class, 'show'])->name('public.transparency.show');
+
+        // Public QR Verification (Rate-limited, zero enumeration, minimal disclosure)
+        Route::get('/verify/{token}', [PublicQrVerificationController::class, 'verify'])
+            ->middleware('throttle:60,1')
+            ->name('public.qr.verify');
     });
 
     // Health Check Endpoint
@@ -464,6 +477,78 @@ Route::prefix('v1')->group(function () {
                 Route::post('/versions/{policyVersion}/approve', 'approveVersion')->name('policy-configurations.versions.approve');
                 Route::post('/versions/{policyVersion}/activate', 'activateVersion')->name('policy-configurations.versions.activate');
             });
+
+        // QR Management & Resolution
+        Route::prefix('qr')->controller(QrManagementController::class)->group(function () {
+            Route::get('/resolve/{token}', 'resolve')->name('qr.resolve');
+            Route::post('/{qrIdentity}/revoke', 'revoke')->name('qr.revoke');
+            Route::post('/{qrIdentity}/regenerate', 'regenerate')->name('qr.regenerate');
+            Route::get('/{qrIdentity}/logs', 'logs')->name('qr.logs');
+        });
+
+        // Signature Profiles
+        Route::prefix('signatures/profiles')->controller(SignatureProfileController::class)->group(function () {
+            Route::get('/', 'index')->name('signatures.profiles.index');
+            Route::post('/', 'store')->name('signatures.profiles.store');
+            Route::get('/{profile}', 'show')->name('signatures.profiles.show');
+            Route::put('/{profile}', 'update')->name('signatures.profiles.update');
+            Route::post('/{profile}/visual', 'uploadVisual')->name('signatures.profiles.visual');
+        });
+
+        // Digital Signatures
+        Route::prefix('signatures')->controller(DigitalSignatureController::class)->group(function () {
+            Route::get('/pending', 'pending')->name('signatures.pending');
+            Route::post('/request', 'requestSignature')->name('signatures.request');
+            Route::get('/{signature}', 'show')->name('signatures.show');
+            Route::post('/{signature}/sign', 'sign')->name('signatures.sign');
+            Route::post('/{signature}/reject', 'reject')->name('signatures.reject');
+            Route::post('/{signature}/revoke', 'revoke')->name('signatures.revoke');
+        });
+
+        // Realization Packages & Items
+        Route::get('/proposals/{proposal}/realizations', [RealizationController::class, 'indexPackages'])->name('proposals.realizations.index');
+        Route::post('/proposals/{proposal}/realizations', [RealizationController::class, 'storePackage'])->name('proposals.realizations.store');
+        Route::prefix('realization-packages')->controller(RealizationController::class)->group(function () {
+            Route::get('/{package}', 'showPackage')->name('realization-packages.show');
+            Route::put('/{package}', 'updatePackage')->name('realization-packages.update');
+            Route::post('/{package}/submit', 'submitPackage')->name('realization-packages.submit');
+            Route::post('/{package}/verify', 'verifyPackage')->name('realization-packages.verify');
+            Route::post('/{package}/items', 'addItem')->name('realization-packages.items.store');
+        });
+        Route::prefix('realization-items')->controller(RealizationController::class)->group(function () {
+            Route::get('/{item}', 'showItem')->name('realization-items.show');
+            Route::put('/{item}', 'updateItem')->name('realization-items.update');
+            Route::post('/{item}/inspect', 'inspectItem')->name('realization-items.inspect');
+        });
+
+        // Realization Receipts
+        Route::get('/proposals/{proposal}/receipts', [ReceiptController::class, 'index'])->name('proposals.receipts.index');
+        Route::post('/proposals/{proposal}/receipts', [ReceiptController::class, 'store'])->name('proposals.receipts.store');
+        Route::prefix('receipts')->controller(ReceiptController::class)->group(function () {
+            Route::get('/{receipt}', 'show')->name('receipts.show');
+            Route::put('/{receipt}', 'update')->name('receipts.update');
+            Route::post('/{receipt}/verify', 'verify')->name('receipts.verify');
+            Route::post('/{receipt}/cancel', 'cancel')->name('receipts.cancel');
+        });
+
+        // Handovers (BAST)
+        Route::get('/realization-packages/{package}/handovers', [HandoverController::class, 'index'])->name('realization-packages.handovers.index');
+        Route::post('/realization-packages/{package}/handovers', [HandoverController::class, 'store'])->name('realization-packages.handovers.store');
+        Route::prefix('handovers')->controller(HandoverController::class)->group(function () {
+            Route::get('/{handover}', 'show')->name('handovers.show');
+            Route::post('/{handover}/submit', 'submit')->name('handovers.submit');
+            Route::post('/{handover}/complete', 'complete')->name('handovers.complete');
+            Route::post('/{handover}/cancel', 'cancel')->name('handovers.cancel');
+        });
+
+        // Monitoring Records & Verification
+        Route::get('/proposals/{proposal}/monitoring-records', [MonitoringController::class, 'index'])->name('proposals.monitoring.index');
+        Route::post('/proposals/{proposal}/monitoring-records', [MonitoringController::class, 'store'])->name('proposals.monitoring.store');
+        Route::prefix('monitoring-records')->controller(MonitoringController::class)->group(function () {
+            Route::get('/{record}', 'show')->name('monitoring.show');
+            Route::post('/{record}/check-item', 'checkItem')->name('monitoring.check-item');
+            Route::post('/{record}/complete', 'complete')->name('monitoring.complete');
+        });
     });
 });
 

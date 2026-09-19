@@ -3,16 +3,20 @@
 namespace App\Models;
 
 use App\Enums\DecisionDocumentStatus;
+use App\Models\Concerns\HasQrIdentity;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class DecisionDocument extends Model
 {
     use HasFactory, HasUuid;
+    use HasFactory, HasQrIdentity, HasUuid;
 
     protected $fillable = [
         'decision_id',
@@ -74,5 +78,16 @@ class DecisionDocument extends Model
     public function latestVersion(): HasOne
     {
         return $this->hasOne(DecisionDocumentVersion::class)->orderByDesc('created_at');
+    }
+
+    public function signatures(): MorphMany
+    {
+        return $this->morphMany(DigitalSignature::class, 'signable');
+    }
+
+    public function activeSignature(): MorphOne
+    {
+        return $this->morphOne(DigitalSignature::class, 'signable')
+            ->where('status', 'signed');
     }
 }

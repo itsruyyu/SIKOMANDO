@@ -194,4 +194,14 @@ class User extends Authenticatable
         return $this->hasMany(ProposalAssignment::class, 'assigned_user_id')
             ->whereIn('status', ['ASSIGNED', 'IN_PROGRESS']);
     }
+
+    public function signatureProfile(): HasOne
+    {
+        return $this->hasOne(SignatureProfile::class, 'user_id');
+    }
+
+    public function signatures(): HasMany
+    {
+        return $this->hasMany(DigitalSignature::class, 'signer_id');
+    }
 }

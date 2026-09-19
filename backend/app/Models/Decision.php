@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DecisionResult;
 use App\Enums\DecisionStatus;
+use App\Models\Concerns\HasQrIdentity;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Decision extends Model
 {
     use HasFactory, HasUuid;
+    use HasFactory, HasQrIdentity, HasUuid;
 
     protected $fillable = [
         'proposal_id',

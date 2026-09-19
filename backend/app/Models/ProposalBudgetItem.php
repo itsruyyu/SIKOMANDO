@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasQrIdentity;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProposalBudgetItem extends Model
 {
     use HasUuid;
+    use HasQrIdentity, HasUuid;
 
     protected $fillable = [
         'proposal_id',
@@ -35,5 +38,10 @@ class ProposalBudgetItem extends Model
     public function proposal(): BelongsTo
     {
         return $this->belongsTo(Proposal::class);
+    }
+
+    public function realizationItems(): HasMany
+    {
+        return $this->hasMany(RealizationItem::class, 'proposal_budget_item_id');
     }
 }

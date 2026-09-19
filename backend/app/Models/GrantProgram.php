@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasQrIdentity;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class GrantProgram extends Model
 {
     use HasFactory;
+    use HasQrIdentity;
     use HasUuid;
 
     protected $fillable = [

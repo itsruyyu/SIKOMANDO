@@ -362,6 +362,8 @@ class FieldSurveyService
             'severity' => $severity,
             'recommended_action' => $data['recommended_action'] ?? null,
             'status' => FieldSurveyFindingStatus::OPEN,
+            'realization_item_id' => $data['realization_item_id'] ?? null,
+            'scanned_qr_token' => $data['scanned_qr_token'] ?? $data['scanned_token'] ?? null,
         ]);
 
         $this->auditLogService->record(
