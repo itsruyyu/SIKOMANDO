@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AssignmentStatus;
 use App\Enums\FieldSurveyFindingSeverity;
 use App\Enums\FieldSurveyFindingStatus;
 use App\Enums\FieldSurveyItemResult;
@@ -13,6 +14,7 @@ use App\Models\FieldSurveyDocument;
 use App\Models\FieldSurveyFinding;
 use App\Models\FieldSurveyItem;
 use App\Models\Proposal;
+use App\Models\ProposalAssignment;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
@@ -441,9 +443,9 @@ class FieldSurveyService
         }
 
         $survey->update([
-            'summary' => $data['summary'] ?? $survey->summary,
+            'summary' => $data['summary'] ?? $data['findings'] ?? $survey->summary,
             'recommendation' => $data['recommendation'] ?? $survey->recommendation,
-            'notes' => $data['notes'] ?? $survey->notes,
+            'notes' => $data['notes'] ?? $data['findings'] ?? $survey->notes,
             'location_name' => $data['location_name'] ?? $survey->location_name,
             'latitude' => $data['latitude'] ?? $survey->latitude,
             'longitude' => $data['longitude'] ?? $survey->longitude,
@@ -612,6 +614,15 @@ class FieldSurveyService
                         notes: sprintf('Field Survey ID: %s; Result: %s', $survey->id, $result->value),
                     );
                 }
+
+                // Synchronize corresponding proposal assignment to COMPLETED
+                ProposalAssignment::where('proposal_id', $survey->proposal_id)
+                    ->where('assignment_type', 'FIELD_SURVEY')
+                    ->where('status', '!=', AssignmentStatus::COMPLETED)
+                    ->update([
+                        'status' => AssignmentStatus::COMPLETED,
+                        'completed_at' => now(),
+                    ]);
             }
 
             $this->auditLogService->record(

@@ -51,7 +51,7 @@ export function Sidebar({ isOpen, onClose }) {
     },
     {
       title: 'Pengajuan & Usulan',
-      show: isPemohon || isSuperAdmin || isAdmin || isAuditor,
+      show: isPemohon || isSuperAdmin || isAdmin || isAuditor || isVerifikator || isEvaluator || isSurveyor,
       items: [
         { to: '/proposals/create', label: 'Buat Usulan Baru', icon: DocumentPlusIcon, show: isPemohon },
         { to: '/proposals', label: isPemohon ? 'Usulan Saya' : 'Daftar Semua Usulan', icon: DocumentTextIcon, show: true },

@@ -14,6 +14,7 @@ import {
   MagnifyingGlassIcon,
   ArrowRightIcon,
   ClockIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline';
 
 export function EvaluationListPage() {
@@ -129,11 +130,21 @@ export function EvaluationListPage() {
                     <Badge status={prop.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link to={`/evaluations/${prop.id}`}>
-                      <Button variant="primary" size="xs" icon={ArrowRightIcon} iconPosition="right">
-                        Mulai Penilaian
-                      </Button>
-                    </Link>
+                    {(() => {
+                      const isCompleted = !['draft', 'submitted', 'verification', 'revision', 'verified', 'evaluation'].includes(String(prop.status || '').toLowerCase());
+                      return (
+                        <Link to={`/evaluations/${prop.id}`}>
+                          <Button
+                            variant={isCompleted ? 'outline' : 'primary'}
+                            size="xs"
+                            icon={isCompleted ? EyeIcon : ArrowRightIcon}
+                            iconPosition="right"
+                          >
+                            {isCompleted ? 'Lihat Hasil Evaluasi' : 'Mulai Penilaian'}
+                          </Button>
+                        </Link>
+                      );
+                    })()}
                   </TableCell>
                 </TableRow>
               ))}

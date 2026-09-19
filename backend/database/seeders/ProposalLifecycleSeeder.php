@@ -15,8 +15,10 @@ use App\Models\ProposalDocument;
 use App\Models\ProposalDocumentVersion;
 use App\Models\ProposalStatusHistory;
 use App\Models\User;
+use App\Services\DocumentService;
 use App\Services\QrService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProposalLifecycleSeeder extends Seeder
@@ -318,6 +320,19 @@ class ProposalLifecycleSeeder extends Seeder
                     'created_at' => now(),
                 ]
             );
+
+            // Ensure physical dummy file exists on disk
+            $storageDisk = $pDoc->storage_disk ?? 'public';
+            $storagePath = $pDoc->storage_path;
+            if (! Storage::disk($storageDisk)->exists($storagePath)) {
+                try {
+                    $docService = app(DocumentService::class);
+                    $pdfContent = $docService->generatePlaceholderPdf($pDoc);
+                    Storage::disk($storageDisk)->put($storagePath, $pdfContent);
+                } catch (\Throwable $e) {
+                    // Ignore if generation fails during seed
+                }
+            }
 
             // 3. Status History
             ProposalStatusHistory::create([

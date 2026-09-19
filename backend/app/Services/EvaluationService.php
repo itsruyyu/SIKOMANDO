@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AssignmentStatus;
 use App\Enums\EvaluationItemResult;
 use App\Enums\EvaluationResult;
 use App\Enums\EvaluationStatus;
@@ -13,6 +14,7 @@ use App\Models\EvaluationWeightConfiguration;
 use App\Models\PolicyConfiguration;
 use App\Models\PolicyVersion;
 use App\Models\Proposal;
+use App\Models\ProposalAssignment;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
@@ -418,6 +420,15 @@ class EvaluationService
                         notes: sprintf('Evaluation ID: %s; Final Score: %s', $evaluation->id, $finalScore),
                     );
                 }
+
+                // Synchronize corresponding proposal assignment to COMPLETED
+                ProposalAssignment::where('proposal_id', $evaluation->proposal_id)
+                    ->where('assignment_type', 'EVALUATION')
+                    ->where('status', '!=', AssignmentStatus::COMPLETED)
+                    ->update([
+                        'status' => AssignmentStatus::COMPLETED,
+                        'completed_at' => now(),
+                    ]);
             }
 
             $this->auditLogService->record(

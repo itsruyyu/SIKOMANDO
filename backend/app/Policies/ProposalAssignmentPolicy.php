@@ -59,6 +59,13 @@ class ProposalAssignmentPolicy
      */
     public function viewWorkload(User $actor): bool
     {
-        return $actor->hasAnyRole(['SUPER_ADMIN', 'ADMIN_SIKOMANDO', 'AUDITOR']);
+        return $actor->hasAnyRole([
+            'SUPER_ADMIN',
+            'ADMIN_SIKOMANDO',
+            'AUDITOR',
+            'VERIFIKATOR',
+            'EVALUATOR',
+            'SURVEYOR',
+        ]);
     }
 }

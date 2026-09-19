@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
-import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDate, formatDateTime, formatFileSize } from '../../utils/formatters';
 import { openPdf, downloadPdf } from '../../utils/pdf';
 import PageHeader from '../../components/layout/PageHeader';
 import Card, { CardBody, CardHeader } from '../../components/ui/Card';
@@ -25,6 +25,9 @@ import {
   BuildingLibraryIcon,
   UserCircleIcon,
   CalendarDaysIcon,
+  EyeIcon,
+  ArrowDownTrayIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 export function ProposalDetailPage() {
@@ -40,6 +43,8 @@ export function ProposalDetailPage() {
   const [activeTab, setActiveTab] = useState('summary');
   const [revisionModalOpen, setRevisionModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
+  const [downloadingDocId, setDownloadingDocId] = useState(null);
 
   const fetchProposalData = async () => {
     setIsLoading(true);
@@ -88,6 +93,89 @@ export function ProposalDetailPage() {
     }
   };
 
+  const handlePreviewDocument = async (doc) => {
+    const filename = (doc.original_filename || '').toLowerCase();
+    const mime = (doc.mime_type || '').toLowerCase();
+    const isPdf = mime.includes('pdf') || filename.endsWith('.pdf');
+    const isImage = mime.startsWith('image/') || filename.endsWith('.jpg') || filename.endsWith('.jpeg') || filename.endsWith('.png') || filename.endsWith('.webp');
+
+    if (!isPdf && !isImage) {
+      toast.info('Format berkas tidak mendukung pratinjau langsung di peramban. Silakan gunakan tombol Unduh untuk membuka berkas.');
+      return;
+    }
+
+    setPreviewDoc({
+      isOpen: true,
+      title: doc.original_filename || 'Pratinjau Dokumen',
+      url: null,
+      isImage,
+      isLoading: true,
+      doc,
+    });
+
+    try {
+      const res = await api.get(`/proposals/${proposal.id}/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      const blobMime = isPdf ? 'application/pdf' : (res.headers?.['content-type'] || 'image/jpeg');
+      const blob = new Blob([res.data || res], { type: blobMime });
+      const objectUrl = window.URL.createObjectURL(blob);
+      setPreviewDoc((prev) => (prev?.isOpen ? { ...prev, url: objectUrl, isLoading: false } : prev));
+    } catch (err) {
+      toast.error(err.message || 'Gagal memuat pratinjau berkas.');
+      setPreviewDoc(null);
+    }
+  };
+
+  const handleClosePreview = () => {
+    if (previewDoc?.url) {
+      window.URL.revokeObjectURL(previewDoc.url);
+    }
+    setPreviewDoc(null);
+  };
+
+  const handleDownloadDocument = async (doc) => {
+    setDownloadingDocId(doc.id);
+    try {
+      const res = await api.get(`/proposals/${proposal.id}/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+
+      let filename = doc.original_filename || `dokumen-${doc.id}.pdf`;
+      const disposition = res.headers?.['content-disposition'];
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match?.[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const mimeType = doc.mime_type || res.headers?.['content-type'] || 'application/octet-stream';
+      const blob = new Blob([res.data || res], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+      toast.success(`Berkas "${filename}" berhasil diunduh.`);
+    } catch (err) {
+      toast.error(err.message || 'Gagal mengunduh berkas persyaratan.');
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewDoc?.url) {
+        window.URL.revokeObjectURL(previewDoc.url);
+      }
+    };
+  }, [previewDoc?.url]);
+
   if (isLoading) {
     return (
       <div className="py-20">
@@ -121,13 +209,13 @@ export function ProposalDetailPage() {
   return (
     <div className="space-y-6 pb-16">
       <PageHeader
-        title={proposal.title}
-        subtitle={`Nomor Registrasi: ${proposal.proposal_number || 'DRAFT'} • Diajukan: ${formatDate(proposal.submitted_at || proposal.created_at)}`}
+        title={proposal?.title || 'Detail Usulan'}
+        subtitle={`Nomor Registrasi: ${proposal?.proposal_number || 'DRAFT'} • Diajukan: ${formatDate(proposal?.submitted_at || proposal?.created_at)}`}
         breadcrumbs={[
           { label: 'Daftar Usulan', to: '/proposals' },
-          { label: proposal.proposal_number || 'Detail Usulan' },
+          { label: proposal?.proposal_number || 'Detail Usulan' },
         ]}
-        badge={<Badge status={proposal.status} />}
+        badge={<Badge status={proposal?.status} />}
         action={
           <div className="flex items-center gap-2">
             {/* Draft Submission */}
@@ -372,34 +460,37 @@ export function ProposalDetailPage() {
           ) : (
             <div className="divide-y divide-slate-100">
               {documents.map((doc) => (
-                <div key={doc.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition">
+                <div key={doc.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 shrink-0">
                       <PaperClipIcon className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-800">{doc.original_filename || doc.document_type}</div>
-                      <div className="text-[11px] text-slate-400">
-                        Diunggah: {formatDate(doc.created_at)} • Status: {doc.verification_status || 'Tersimpan'}
+                      <div className="text-xs font-bold text-slate-800">{doc.original_filename || doc.document_type?.name || doc.document_type}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {doc.file_size ? `${formatFileSize(doc.file_size)} • ` : ''}Diunggah: {formatDate(doc.created_at)} • Status: <span className="font-semibold text-slate-600">{doc.verification_status || doc.status || 'Tersimpan'}</span>
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    onClick={async () => {
-                      try {
-                        await downloadPdf(
-                          `/proposals/${proposal.id}/documents/${doc.id}/download`,
-                          doc.original_filename || `dokumen-${doc.id}.pdf`
-                        );
-                      } catch {
-                        toast.error('Gagal mengunduh berkas persyaratan.');
-                      }
-                    }}
-                  >
-                    Unduh Berkas
-                  </Button>
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() => handlePreviewDocument(doc)}
+                      icon={EyeIcon}
+                    >
+                      Lihat
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() => handleDownloadDocument(doc)}
+                      isLoading={downloadingDocId === doc.id}
+                      icon={ArrowDownTrayIcon}
+                    >
+                      Unduh
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -447,6 +538,69 @@ export function ProposalDetailPage() {
         proposalId={proposal.id}
         onSuccess={fetchProposalData}
       />
+
+      {/* Document Preview Modal */}
+      {previewDoc?.isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2.5 min-w-0 pr-4">
+                <div className="p-2 rounded-lg bg-blue-100 text-blue-700 shrink-0">
+                  <PaperClipIcon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 truncate">
+                    {previewDoc.title}
+                  </h3>
+                  <span className="text-[11px] text-slate-400">
+                    Pratinjau Berkas Digital SIKOMANDO
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {previewDoc.doc && (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    icon={ArrowDownTrayIcon}
+                    onClick={() => handleDownloadDocument(previewDoc.doc)}
+                  >
+                    Unduh
+                  </Button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleClosePreview}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                  title="Tutup Pratinjau"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 flex-1 overflow-auto bg-slate-100 flex items-center justify-center min-h-[60vh]">
+              {previewDoc.isLoading ? (
+                <Spinner size="lg" label="Mengambil dan memuat berkas pratinjau..." />
+              ) : previewDoc.isImage ? (
+                <img
+                  src={previewDoc.url}
+                  alt={previewDoc.title}
+                  className="max-h-[75vh] w-auto max-w-full rounded-lg shadow-md object-contain mx-auto"
+                />
+              ) : (
+                <iframe
+                  src={previewDoc.url}
+                  title={previewDoc.title}
+                  className="w-full h-[75vh] rounded-lg shadow-inner bg-white border border-slate-200"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

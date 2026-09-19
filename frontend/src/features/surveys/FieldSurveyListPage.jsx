@@ -143,14 +143,45 @@ export function FieldSurveyListPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                      {survey.status || 'Terjadwal'}
-                    </span>
+                    {(() => {
+                      const st = String(survey.status || '').toLowerCase();
+                      if (st === 'completed') {
+                        return (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Selesai
+                          </span>
+                        );
+                      }
+                      if (st === 'in_progress') {
+                        return (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Sedang Berlangsung
+                          </span>
+                        );
+                      }
+                      if (st === 'rejected') {
+                        return (
+                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                            Ditolak
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                          {survey.status_label || survey.status || 'Terjadwal'}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right">
                     <Link to={`/field-surveys/${survey.proposal_id || survey.id}`}>
-                      <Button variant="primary" size="xs" icon={ArrowRightIcon} iconPosition="right">
-                        Buka Formulir Lapangan
+                      <Button
+                        variant={String(survey.status || '').toLowerCase() === 'completed' ? 'outline' : 'primary'}
+                        size="xs"
+                        icon={ArrowRightIcon}
+                        iconPosition="right"
+                      >
+                        {String(survey.status || '').toLowerCase() === 'completed' ? 'Lihat Hasil Berita Acara' : 'Buka Formulir Lapangan'}
                       </Button>
                     </Link>
                   </TableCell>

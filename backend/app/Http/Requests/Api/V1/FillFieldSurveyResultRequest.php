@@ -19,6 +19,11 @@ class FillFieldSurveyResultRequest extends FormRequest
                 'string',
                 'max:10000',
             ],
+            'findings' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
             'recommendation' => [
                 'nullable',
                 'string',

@@ -60,11 +60,26 @@ export function InternalStaffDashboard() {
   // Filter workload specific to current user if available
   const safeWorkload = Array.isArray(workload) ? workload : [];
   const safeAssignments = Array.isArray(myAssignments) ? myAssignments : [];
-  const userWorkload = safeWorkload.find((w) => w?.user_id === user?.id) || {
-    total_tasks: safeAssignments.length,
-    active_tasks: safeAssignments.filter((a) => a?.status === 'active').length,
-    completed_tasks: safeAssignments.filter((a) => a?.status === 'completed').length,
-  };
+
+  const userRows = safeWorkload.filter((w) => w?.user_id === user?.id);
+
+  const userWorkload = userRows.length > 0
+    ? {
+        total_tasks: userRows.reduce((sum, r) => sum + parseInt(r.total_tasks || 0, 10), 0),
+        active_tasks: userRows.reduce((sum, r) => sum + parseInt(r.active_tasks || 0, 10) + parseInt(r.pending_tasks || 0, 10), 0),
+        completed_tasks: userRows.reduce((sum, r) => sum + parseInt(r.completed_tasks || 0, 10), 0),
+      }
+    : {
+        total_tasks: safeAssignments.length,
+        active_tasks: safeAssignments.filter((a) => {
+          const st = String(a?.status || '').toUpperCase();
+          return st === 'ASSIGNED' || st === 'IN_PROGRESS' || st === 'ACTIVE' || st === 'PENDING';
+        }).length,
+        completed_tasks: safeAssignments.filter((a) => {
+          const st = String(a?.status || '').toUpperCase();
+          return st === 'COMPLETED' || st === 'SELESAI';
+        }).length,
+      };
 
   const roleLabel = ROLE_LABELS[primaryRole] || 'Petugas Teknis';
 
@@ -204,9 +219,14 @@ export function InternalStaffDashboard() {
                   </TableCell>
                   <TableCell>{formatDate(task.assigned_at || task.created_at)}</TableCell>
                   <TableCell>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${task.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                      {task.status === 'completed' ? 'Selesai' : 'Aktif'}
-                    </span>
+                    {(() => {
+                      const isCompleted = String(task.status || '').toUpperCase() === 'COMPLETED';
+                      return (
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {isCompleted ? 'Selesai' : 'Aktif'}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right">
                     <Link to={`/proposals/${task.proposal_id}`}>

@@ -86,6 +86,7 @@ export function EvaluationWorkspacePage() {
   }, [proposalId]);
 
   const handleScoreChange = async (index, newScore) => {
+    if (isCompleted) return;
     const scoreVal = Math.min(100, Math.max(0, parseInt(newScore) || 0));
     const updated = [...items];
     updated[index].score = scoreVal;
@@ -105,6 +106,7 @@ export function EvaluationWorkspacePage() {
   };
 
   const handleNotesChange = (index, notesVal) => {
+    if (isCompleted) return;
     const updated = [...items];
     updated[index].notes = notesVal;
     setItems(updated);
@@ -118,7 +120,7 @@ export function EvaluationWorkspacePage() {
   }, 0).toFixed(1);
 
   const handleCompleteEvaluation = async () => {
-    if (!evaluation) return;
+    if (!evaluation || isCompleted) return;
     setIsSubmitting(true);
 
     try {
@@ -136,6 +138,14 @@ export function EvaluationWorkspacePage() {
       setIsSubmitting(false);
     }
   };
+
+  const evalStatus = String(evaluation?.status || '').toLowerCase();
+  const propStatus = String(proposal?.status || '').toLowerCase();
+  const isCompleted =
+    evalStatus === 'completed' ||
+    evalStatus === 'recommended' ||
+    evaluation?.completed_at != null ||
+    Boolean(propStatus && !['draft', 'submitted', 'verification', 'revision', 'verified', 'evaluation'].includes(propStatus));
 
   if (isLoading) {
     return (
@@ -162,6 +172,28 @@ export function EvaluationWorkspacePage() {
           </Link>
         }
       />
+
+      {/* Completed Notice Banner */}
+      {isCompleted && (
+        <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0">
+              <CheckBadgeIcon className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-emerald-950">
+                Lembar Hasil Evaluasi Kelayakan Teknis Telah Selesai
+              </h4>
+              <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                Penilaian substansi usulan ini telah disahkan dan tercatat dalam sistem pertimbangan TAPD Pemprov Sulawesi Utara.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-200 text-emerald-950 border border-emerald-300 uppercase tracking-wider shrink-0">
+            {totalScore >= 75 ? 'Rekomendasi Lolos' : 'Di Bawah Standar'}
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT PANE (7 Cols): Scoring Rubrics */}
@@ -196,6 +228,7 @@ export function EvaluationWorkspacePage() {
                         onChange={(e) => handleScoreChange(idx, e.target.value)}
                         placeholder="0-100"
                         mono
+                        disabled={isCompleted}
                         required
                       />
                     </div>
@@ -206,7 +239,8 @@ export function EvaluationWorkspacePage() {
                     value={it.notes || ''}
                     onChange={(e) => handleNotesChange(idx, e.target.value)}
                     placeholder="Catatan justifikasi skor (opsional)..."
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500"
+                    disabled={isCompleted}
+                    className={`w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 ${isCompleted ? 'cursor-not-allowed opacity-80' : ''}`}
                   />
                 </div>
               ))}
@@ -245,6 +279,7 @@ export function EvaluationWorkspacePage() {
                 onChange={(e) => setRecommendedAmount(parseFloat(e.target.value) || 0)}
                 placeholder="Rp 0"
                 mono
+                disabled={isCompleted}
                 required
               />
               <div className="text-[11px] text-slate-400">
@@ -257,18 +292,31 @@ export function EvaluationWorkspacePage() {
                 onChange={(e) => setRecommendationNotes(e.target.value)}
                 placeholder="Tuliskan catatan teknis untuk pertimbangan Tim Anggaran Pemerintah Daerah (TAPD)..."
                 rows={4}
+                disabled={isCompleted}
               />
 
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full font-bold shadow-md"
-                onClick={handleCompleteEvaluation}
-                isLoading={isSubmitting}
-                icon={CheckBadgeIcon}
-              >
-                Selesaikan & Terbitkan Rekomendasi
-              </Button>
+              {isCompleted ? (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="w-full font-bold opacity-80 cursor-not-allowed bg-slate-100 text-slate-600 border-slate-300"
+                  disabled
+                  icon={CheckBadgeIcon}
+                >
+                  Rekomendasi Telah Diterbitkan (Selesai)
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full font-bold shadow-md"
+                  onClick={handleCompleteEvaluation}
+                  isLoading={isSubmitting}
+                  icon={CheckBadgeIcon}
+                >
+                  Selesaikan &amp; Terbitkan Rekomendasi
+                </Button>
+              )}
             </CardBody>
           </Card>
         </div>

@@ -196,7 +196,7 @@ export function DecisionDetailPage() {
                 Ditandatangani Secara Elektronik (TTE)
               </span>
             </div>
-            <span className="font-bold text-slate-900 block underline">Drs. STEVEN KANDOUW, M.Si</span>
+            <span className="font-bold text-slate-900 block underline">Mayjen TNI (Purn.) Yulius Selvanus Komaling, S.E</span>
           </div>
         </div>
       </div>

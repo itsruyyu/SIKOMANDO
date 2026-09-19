@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { formatCoordinates } from '../../utils/formatters';
+import { formatCoordinates, formatDateTime } from '../../utils/formatters';
 import PageHeader from '../../components/layout/PageHeader';
 import Card, { CardBody, CardHeader } from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
@@ -18,6 +18,7 @@ import {
   ArrowLeftIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  CheckBadgeIcon,
 } from '@heroicons/react/24/outline';
 
 export function FieldSurveyWorkspacePage() {
@@ -80,7 +81,11 @@ export function FieldSurveyWorkspacePage() {
           setSurvey(activeSurvey);
           if (activeSurvey.latitude) setLatitude(activeSurvey.latitude.toString());
           if (activeSurvey.longitude) setLongitude(activeSurvey.longitude.toString());
-          if (activeSurvey.findings) setFindingsNotes(activeSurvey.findings);
+          const findingsText = activeSurvey.summary || activeSurvey.notes || (typeof activeSurvey.findings === 'string' ? activeSurvey.findings : '');
+          if (findingsText) setFindingsNotes(findingsText);
+          if (activeSurvey.result) {
+            setConclusion(activeSurvey.result === 'recommended' ? 'recommended' : 'rejected');
+          }
         }
       } catch (err) {
         console.error('Failed to load survey details:', err);
@@ -127,14 +132,23 @@ export function FieldSurveyWorkspacePage() {
     setPhotoPreviews((prev) => [...prev, ...newPreviews]);
   };
 
+  const surveyStatus = String(survey?.status || '').toLowerCase();
+  const propStatus = String(proposal?.status || '').toLowerCase();
+  const isCompleted =
+    surveyStatus === 'completed' ||
+    surveyStatus === 'rejected' ||
+    survey?.completed_at != null ||
+    Boolean(propStatus && ['recommended', 'approval', 'approved', 'disbursed', 'implementation', 'lpj_submitted', 'completed'].includes(propStatus));
+
   const handleChecklistToggle = (id, status) => {
+    if (isCompleted) return;
     setChecklist((prev) =>
       prev.map((it) => (it.id === id ? { ...it, status } : it))
     );
   };
 
   const handleCompleteSurvey = async () => {
-    if (!survey) return;
+    if (!survey || isCompleted) return;
     setIsSubmitting(true);
 
     try {
@@ -142,8 +156,10 @@ export function FieldSurveyWorkspacePage() {
       await api.patch(`/proposals/${proposalId}/field-surveys/${survey.id}/result`, {
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
+        summary: findingsNotes || 'Survei faktual lapangan selesai dilaksanakan dengan hasil memuaskan.',
         findings: findingsNotes || 'Survei faktual lapangan selesai dilaksanakan dengan hasil memuaskan.',
         recommendation: conclusion,
+        notes: findingsNotes || '',
       });
 
       // 2. Submit photos if any
@@ -202,6 +218,33 @@ export function FieldSurveyWorkspacePage() {
         }
       />
 
+      {/* Completed Status Notice Banner */}
+      {isCompleted && (
+        <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0">
+              <CheckBadgeIcon className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-emerald-950">
+                Berita Acara Survei Lapangan Resmi Telah Selesai &amp; Diterbitkan
+              </h4>
+              <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                Survei faktual lapangan ini telah diselesaikan pada{' '}
+                <strong>{formatDateTime(survey?.completed_at || survey?.updated_at)}</strong>. Seluruh data koordinat GPS, temuan fisik, dan bukti foto telah tercatat permanen.
+              </p>
+            </div>
+          </div>
+          <span className={`text-xs font-bold px-3 py-1.5 rounded-xl text-center uppercase tracking-wider shrink-0 ${
+            conclusion === 'recommended' || survey?.result === 'recommended'
+              ? 'bg-emerald-200 text-emerald-950 border border-emerald-300'
+              : 'bg-rose-200 text-rose-950 border border-rose-300'
+          }`}>
+            {survey?.result_label || (conclusion === 'recommended' ? 'Lolos Rekomendasi' : 'Gugur Lapangan')}
+          </span>
+        </div>
+      )}
+
       {/* Geolocation Tagging Card */}
       <Card className="border-blue-200 shadow-sm overflow-hidden">
         <CardHeader
@@ -227,16 +270,18 @@ export function FieldSurveyWorkspacePage() {
               </div>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              icon={SparklesIcon}
-              onClick={handleCaptureGps}
-              isLoading={isLocating}
-              className="shrink-0"
-            >
-              Kunci GPS Otomatis
-            </Button>
+            {!isCompleted && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={SparklesIcon}
+                onClick={handleCaptureGps}
+                isLoading={isLocating}
+                className="shrink-0"
+              >
+                Kunci GPS Otomatis
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -246,6 +291,7 @@ export function FieldSurveyWorkspacePage() {
               onChange={(e) => setLatitude(e.target.value)}
               placeholder="Contoh: 1.47483"
               mono
+              disabled={isCompleted}
               required
             />
             <Input
@@ -254,6 +300,7 @@ export function FieldSurveyWorkspacePage() {
               onChange={(e) => setLongitude(e.target.value)}
               placeholder="Contoh: 124.84281"
               mono
+              disabled={isCompleted}
               required
             />
           </div>
@@ -276,8 +323,9 @@ export function FieldSurveyWorkspacePage() {
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
+                  disabled={isCompleted}
                   onClick={() => handleChecklistToggle(it.id, 'valid')}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${isCompleted ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'} ${
                     it.status === 'valid'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -287,8 +335,9 @@ export function FieldSurveyWorkspacePage() {
                 </button>
                 <button
                   type="button"
+                  disabled={isCompleted}
                   onClick={() => handleChecklistToggle(it.id, 'invalid')}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition ${isCompleted ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'} ${
                     it.status === 'invalid'
                       ? 'bg-rose-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -306,23 +355,25 @@ export function FieldSurveyWorkspacePage() {
       <Card className="border-slate-200 shadow-sm">
         <CardHeader
           title="Dokumentasi Foto Bukti Fisik Lapangan"
-          subtitle="Unggah foto plang nama, ruangan kantor, atau wawancara dengan pengurus"
+          subtitle="Foto plang nama, ruangan kantor, dan wawancara pengurus di lokasi"
         />
         <CardBody className="space-y-4">
-          <div className="flex items-center gap-3">
-            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-blue-400 bg-blue-50/50 hover:bg-blue-100/50 text-xs font-bold text-blue-700 transition">
-              <CameraIcon className="w-5 h-5" />
-              <span>Ambil Foto / Pilih Gambar</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handlePhotoSelect}
-              />
-            </label>
-            <span className="text-xs text-slate-400">Format JPG, PNG (maksimal 5MB)</span>
-          </div>
+          {!isCompleted && (
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-blue-400 bg-blue-50/50 hover:bg-blue-100/50 text-xs font-bold text-blue-700 transition">
+                <CameraIcon className="w-5 h-5" />
+                <span>Ambil Foto / Pilih Gambar</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+              </label>
+              <span className="text-xs text-slate-400">Format JPG, PNG (maksimal 5MB)</span>
+            </div>
+          )}
 
           {photoPreviews.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -352,6 +403,7 @@ export function FieldSurveyWorkspacePage() {
             onChange={(e) => setFindingsNotes(e.target.value)}
             placeholder="Deskripsikan kondisi fisik, kesiapan pengurus, dan kelayakan sarana yang ditinjau..."
             rows={3}
+            disabled={isCompleted}
             required
           />
 
@@ -362,8 +414,9 @@ export function FieldSurveyWorkspacePage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                disabled={isCompleted}
                 onClick={() => setConclusion('recommended')}
-                className={`p-3 rounded-xl border text-xs font-bold text-center transition cursor-pointer ${
+                className={`p-3 rounded-xl border text-xs font-bold text-center transition ${isCompleted ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'} ${
                   conclusion === 'recommended'
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500'
                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -373,8 +426,9 @@ export function FieldSurveyWorkspacePage() {
               </button>
               <button
                 type="button"
+                disabled={isCompleted}
                 onClick={() => setConclusion('rejected')}
-                className={`p-3 rounded-xl border text-xs font-bold text-center transition cursor-pointer ${
+                className={`p-3 rounded-xl border text-xs font-bold text-center transition ${isCompleted ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'} ${
                   conclusion === 'rejected'
                     ? 'border-rose-500 bg-rose-50 text-rose-900 ring-2 ring-rose-500'
                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -386,16 +440,28 @@ export function FieldSurveyWorkspacePage() {
           </div>
 
           <div className="pt-2">
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full font-bold shadow-md"
-              onClick={handleCompleteSurvey}
-              isLoading={isSubmitting}
-              icon={ShieldCheckIcon}
-            >
-              Selesaikan & Terbitkan Berita Acara Survei Lapangan
-            </Button>
+            {isCompleted ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="w-full font-bold opacity-80 cursor-not-allowed bg-slate-100 text-slate-600 border-slate-300"
+                disabled
+                icon={CheckBadgeIcon}
+              >
+                Berita Acara Telah Diterbitkan (Selesai)
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full font-bold shadow-md"
+                onClick={handleCompleteSurvey}
+                isLoading={isSubmitting}
+                icon={ShieldCheckIcon}
+              >
+                Selesaikan &amp; Terbitkan Berita Acara Survei Lapangan
+              </Button>
+            )}
           </div>
         </CardBody>
       </Card>
