@@ -39,6 +39,7 @@ class ProposalController extends Controller
                 $request->user()->id
             );
         }
+        $query->visibleTo($request->user());
 
         if ($request->filled('status')) {
             $query->where(

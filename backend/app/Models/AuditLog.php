@@ -27,6 +27,17 @@ class AuditLog extends Model
 
     public $timestamps = false;
 
+    protected static function booted(): void
+    {
+        static::updating(function () {
+            throw new \RuntimeException('Audit logs are append-only and cannot be updated.');
+        });
+
+        static::deleting(function () {
+            throw new \RuntimeException('Audit logs are append-only and cannot be deleted.');
+        });
+    }
+
     protected function casts(): array
     {
         return [

@@ -259,77 +259,111 @@ class DisbursementService
 
     public function recordTransaction(Disbursement $disbursement, User $actor, array $data): DisbursementTransaction
     {
-        if (! in_array($disbursement->status, [DisbursementStatus::APPROVED, DisbursementStatus::PROCESSED], true)) {
-            throw ValidationException::withMessages([
-                'status' => 'Transaksi pencairan hanya dapat dicatat setelah pencairan disetujui (APPROVED).',
-            ]);
-        }
+        return DB::transaction(function () use ($disbursement, $actor, $data) {
+            // 1. Check idempotency key if supplied
+            if (! empty($data['idempotency_key'])) {
+                $existingTx = DisbursementTransaction::query()
+                    ->where('idempotency_key', $data['idempotency_key'])
+                    ->first();
 
-        // 1. Prevent duplicate bank reference
-        if (! empty($data['bank_reference'])) {
-            $refExists = DisbursementTransaction::query()
-                ->where('bank_reference', $data['bank_reference'])
-                ->exists();
+                if ($existingTx !== null) {
+                    return $existingTx->fresh(['disbursement', 'recorder:id,name,email']);
+                }
+            }
 
-            if ($refExists) {
+            // 2. Lock disbursement row
+            $lockedDisbursement = Disbursement::query()
+                ->whereKey($disbursement->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($lockedDisbursement->status, [DisbursementStatus::APPROVED, DisbursementStatus::PROCESSED], true)) {
                 throw ValidationException::withMessages([
-                    'bank_reference' => 'Referensi transaksi bank sudah digunakan pada pencairan lain.',
+                    'status' => 'Transaksi pencairan hanya dapat dicatat setelah pencairan disetujui (APPROVED).',
                 ]);
             }
-        }
 
-        // 2. Validate ceiling limits
-        $proposal = $disbursement->proposal()->with(['grantProgram', 'organization'])->firstOrFail();
-        $decision = $proposal->decisions()->where('result', DecisionResult::APPROVED)->latest('issued_at')->firstOrFail();
-        $approvedCeiling = (float) ($decision->approved_amount ?: $proposal->approved_amount);
+            // 3. Prevent duplicate bank reference
+            if (! empty($data['bank_reference'])) {
+                $refExists = DisbursementTransaction::query()
+                    ->where('bank_reference', $data['bank_reference'])
+                    ->exists();
 
-        $amount = isset($data['amount'])
-            ? (float) $data['amount']
-            : (float) ($disbursement->approved_amount ?: $disbursement->planned_amount);
+                if ($refExists) {
+                    throw ValidationException::withMessages([
+                        'bank_reference' => 'Referensi transaksi bank sudah digunakan pada pencairan lain.',
+                    ]);
+                }
+            }
 
-        if ($amount > (float) ($disbursement->approved_amount ?: $disbursement->planned_amount)) {
-            throw ValidationException::withMessages([
-                'amount' => 'Nominal pencairan melebihi nominal tahap yang telah disetujui.',
-            ]);
-        }
+            // 4. Lock proposal row and validate ceiling limits
+            $proposal = Proposal::query()
+                ->whereKey($lockedDisbursement->proposal_id)
+                ->with(['grantProgram', 'organization'])
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $currentPaidTotal = (float) Disbursement::query()
-            ->where('proposal_id', $proposal->id)
-            ->where('status', DisbursementStatus::PAID)
-            ->sum('paid_amount');
+            $decision = $proposal->decisions()
+                ->where('result', DecisionResult::APPROVED)
+                ->latest('issued_at')
+                ->firstOrFail();
 
-        if (($currentPaidTotal + $amount) > $approvedCeiling) {
-            throw ValidationException::withMessages([
-                'amount' => sprintf(
-                    'Total pencairan kumulatif melebihi nominal plafon yang disetujui (Rp %s).',
-                    number_format($approvedCeiling, 0, ',', '.')
-                ),
-            ]);
-        }
+            $approvedCeiling = (float) ($decision->approved_amount ?: $proposal->approved_amount);
 
-        return DB::transaction(function () use ($disbursement, $proposal, $actor, $data, $amount) {
+            $amount = isset($data['amount'])
+                ? (float) $data['amount']
+                : (float) ($lockedDisbursement->approved_amount ?: $lockedDisbursement->planned_amount);
+
+            if ($amount <= 0) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Nominal pencairan harus lebih besar dari 0.',
+                ]);
+            }
+
+            if ($amount > (float) ($lockedDisbursement->approved_amount ?: $lockedDisbursement->planned_amount)) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Nominal pencairan melebihi nominal tahap yang telah disetujui.',
+                ]);
+            }
+
+            $currentPaidTotal = (float) Disbursement::query()
+                ->where('proposal_id', $proposal->id)
+                ->where('status', DisbursementStatus::PAID)
+                ->where('id', '!=', $lockedDisbursement->id)
+                ->sum('paid_amount');
+
+            if (($currentPaidTotal + $amount) > $approvedCeiling) {
+                throw ValidationException::withMessages([
+                    'amount' => sprintf(
+                        'Total pencairan kumulatif melebihi nominal plafon yang disetujui (Rp %s).',
+                        number_format($approvedCeiling, 0, ',', '.')
+                    ),
+                ]);
+            }
+
             $transactionNumber = $this->numberingService->generateNumber('disbursement_transaction', $proposal->grantProgram);
 
             $transaction = DisbursementTransaction::create([
-                'disbursement_id' => $disbursement->id,
+                'disbursement_id' => $lockedDisbursement->id,
                 'recorded_by' => $actor->id,
                 'transaction_number' => $transactionNumber,
+                'idempotency_key' => $data['idempotency_key'] ?? null,
                 'transaction_type' => $data['transaction_type'] ?? 'transfer',
                 'amount' => $amount,
                 'status' => DisbursementTransactionStatus::CONFIRMED,
                 'transaction_date' => $data['transaction_date'] ?? now()->toDateString(),
                 'bank_reference' => $data['bank_reference'] ?? null,
-                'recipient_name' => $data['recipient_name'] ?? $disbursement->bank_account_name ?? $proposal->organization?->name,
-                'bank_name' => $data['bank_name'] ?? $disbursement->bank_name,
-                'bank_account_number' => $data['bank_account_number'] ?? $disbursement->bank_account_number,
+                'recipient_name' => $data['recipient_name'] ?? $lockedDisbursement->bank_account_name ?? $proposal->organization?->name,
+                'bank_name' => $data['bank_name'] ?? $lockedDisbursement->bank_name,
+                'bank_account_number' => $data['bank_account_number'] ?? $lockedDisbursement->bank_account_number,
                 'notes' => $data['notes'] ?? 'Pencairan dana telah ditransfer.',
             ]);
 
             // Update Disbursement to PAID
-            $disbursement->paid_amount = $amount;
-            $disbursement->status = DisbursementStatus::PAID;
-            $disbursement->paid_date = now()->toDateString();
-            $disbursement->save();
+            $lockedDisbursement->paid_amount = $amount;
+            $lockedDisbursement->status = DisbursementStatus::PAID;
+            $lockedDisbursement->paid_date = now()->toDateString();
+            $lockedDisbursement->save();
 
             // Transition Proposal status to DISBURSED if currently APPROVED
             $propStatus = $proposal->status instanceof ProposalStatus
@@ -347,13 +381,29 @@ class DisbursementService
             }
 
             // Check if all disbursements in plan are paid
-            if ($disbursement->plan) {
-                $unpaidCount = $disbursement->plan->disbursements()
+            if ($lockedDisbursement->plan) {
+                $unpaidCount = $lockedDisbursement->plan->disbursements()
                     ->where('status', '!=', DisbursementStatus::PAID)
                     ->count();
 
                 if ($unpaidCount === 0) {
-                    $disbursement->plan->update(['status' => DisbursementPlanStatus::COMPLETED]);
+                    $lockedDisbursement->plan->update(['status' => DisbursementPlanStatus::COMPLETED]);
+
+                    // BE-14: Otomatisasi transisi ke IMPLEMENTATION setelah seluruh pencairan tuntas
+                    $freshProposal = $proposal->fresh();
+                    $freshStatus = $freshProposal->status instanceof ProposalStatus
+                        ? $freshProposal->status
+                        : ProposalStatus::tryFrom((string) $freshProposal->status);
+
+                    if ($freshStatus === ProposalStatus::DISBURSED) {
+                        $this->proposalWorkflowService->transition(
+                            proposal: $freshProposal,
+                            targetStatus: ProposalStatus::IMPLEMENTATION,
+                            actorId: $actor->id,
+                            reason: 'Seluruh tahap pencairan dana telah selesai disalurkan. Usulan memasuki tahap pelaksanaan program.',
+                            notes: 'Transisi otomatis sistem setelah seluruh tahap pencairan berstatus PAID.'
+                        );
+                    }
                 }
             }
 
@@ -362,11 +412,11 @@ class DisbursementService
                 action: 'disbursement.paid',
                 module: 'disbursement',
                 entityType: Disbursement::class,
-                entityId: $disbursement->id,
+                entityId: $lockedDisbursement->id,
                 newValues: [
                     'status' => DisbursementStatus::PAID->value,
                     'paid_amount' => $amount,
-                    'paid_date' => $disbursement->paid_date,
+                    'paid_date' => $lockedDisbursement->paid_date,
                     'transaction_number' => $transactionNumber,
                 ]
             );
@@ -380,6 +430,7 @@ class DisbursementService
                     'transaction_number' => $transactionNumber,
                     'amount' => $amount,
                     'bank_reference' => $data['bank_reference'] ?? null,
+                    'idempotency_key' => $data['idempotency_key'] ?? null,
                 ]
             );
 

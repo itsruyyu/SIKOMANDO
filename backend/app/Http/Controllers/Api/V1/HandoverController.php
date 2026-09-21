@@ -17,17 +17,33 @@ class HandoverController extends Controller
     ) {}
 
     /**
-     * List handovers (BAST) for a package.
+     * List handovers (BAST) for a package or flat cross-package.
      */
-    public function index(RealizationPackage $package): JsonResponse
+    public function index(Request $request, ?RealizationPackage $package = null): JsonResponse
     {
-        $handovers = Handover::where('realization_package_id', $package->id)
-            ->with(['qrIdentity', 'items'])
-            ->latest()
-            ->get();
+        $this->authorize('viewAny', Handover::class);
 
-        return ApiResponse::success(
-            data: $handovers,
+        $query = Handover::query()
+            ->with(['qrIdentity', 'items', 'package.proposal.organization'])
+            ->latest();
+
+        if ($package && $package->exists) {
+            $query->where('realization_package_id', $package->id);
+        }
+
+        if ($request->user()->hasRole('PEMOHON')) {
+            $query->whereHas('package.proposal', fn ($q) => $q->where('applicant_id', $request->user()->id));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
+        $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
+        $handovers = $query->paginate($perPage);
+
+        return ApiResponse::paginated(
+            paginator: $handovers,
             message: 'Daftar BAST (Berita Acara Serah Terima) berhasil diambil.'
         );
     }
@@ -37,6 +53,8 @@ class HandoverController extends Controller
      */
     public function store(Request $request, RealizationPackage $package): JsonResponse
     {
+        $this->authorize('create', [Handover::class, $package]);
+
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
             'handover_date' => ['nullable', 'date'],
@@ -73,6 +91,8 @@ class HandoverController extends Controller
      */
     public function show(Handover $handover): JsonResponse
     {
+        $this->authorize('view', $handover);
+
         return ApiResponse::success(
             data: $handover->load(['package.proposal.organization', 'items', 'qrIdentity', 'digitalSignatures']),
             message: 'Detail BAST berhasil diambil.'
@@ -84,6 +104,8 @@ class HandoverController extends Controller
      */
     public function submit(Request $request, Handover $handover): JsonResponse
     {
+        $this->authorize('submit', $handover);
+
         $submitted = $this->handoverService->submitHandover($handover, $request->user());
 
         return ApiResponse::success(
@@ -97,6 +119,8 @@ class HandoverController extends Controller
      */
     public function complete(Request $request, Handover $handover): JsonResponse
     {
+        $this->authorize('complete', $handover);
+
         $completed = $this->handoverService->completeHandover($handover, $request->user());
 
         return ApiResponse::success(
@@ -110,6 +134,8 @@ class HandoverController extends Controller
      */
     public function cancel(Request $request, Handover $handover): JsonResponse
     {
+        $this->authorize('cancel', $handover);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);

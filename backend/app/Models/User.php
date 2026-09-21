@@ -6,6 +6,7 @@ use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -26,6 +27,10 @@ class User extends Authenticatable
         'password',
         'phone',
         'is_active',
+        'failed_login_attempts',
+        'locked_until',
+        'password_changed_at',
+        'must_change_password',
     ];
 
     /**
@@ -46,6 +51,10 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'immutable_datetime',
+            'locked_until' => 'immutable_datetime',
+            'password_changed_at' => 'immutable_datetime',
+            'must_change_password' => 'boolean',
+            'failed_login_attempts' => 'integer',
         ];
     }
 

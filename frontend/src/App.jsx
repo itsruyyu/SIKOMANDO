@@ -49,6 +49,7 @@ import ExecutiveDossierPage from './features/approvals/ExecutiveDossierPage';
 
 import DecisionListPage from './features/decisions/DecisionListPage';
 import DecisionDetailPage from './features/decisions/DecisionDetailPage';
+import DigitalSignaturePage from './features/signatures/DigitalSignaturePage';
 
 import DisbursementListPage from './features/disbursements/DisbursementListPage';
 import DisbursementDetailPage from './features/disbursements/DisbursementDetailPage';
@@ -63,14 +64,20 @@ import LpjDetailPage from './features/lpj/LpjDetailPage';
 import AuditLogListPage from './features/audit/AuditLogListPage';
 import UserManagementPage from './features/users/UserManagementPage';
 import PolicyConfigurationPage from './features/policies/PolicyConfigurationPage';
+import AssignmentManagementPage from './features/assignments/AssignmentManagementPage';
 import QrManagementPage from './features/qr/QrManagementPage';
 import NotificationInboxPage from './features/notifications/NotificationInboxPage';
+import SystemMonitoringPage from './features/system/SystemMonitoringPage';
+import ErrorBoundary from './components/feedback/ErrorBoundary';
 
 function ProtectedLayout() {
   return (
     <ProtectedRoute>
       <AppShell>
         <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </AppShell>
     </ProtectedRoute>
   );
@@ -130,8 +137,10 @@ export default function App() {
               <Route path="/approvals/:approvalId" element={<ExecutiveDossierPage />} />
 
               {/* Decisions (SK Gubernur) */}
+              {/* Decisions (SK Gubernur) & Digital Signatures (TTE) */}
               <Route path="/decisions" element={<DecisionListPage />} />
               <Route path="/decisions/:id" element={<DecisionDetailPage />} />
+              <Route path="/signatures" element={<DigitalSignaturePage />} />
 
               {/* Disbursements (SP2D) */}
               <Route path="/disbursements" element={<DisbursementListPage />} />
@@ -165,6 +174,10 @@ export default function App() {
               <Route path="/organizations" element={<Navigate to="/dashboard" replace />} />
               <Route path="/settings" element={<Navigate to="/policies" replace />} />
               <Route path="/assignments" element={<Navigate to="/dashboard" replace />} />
+              {/* Field Staff Assignment Management */}
+              <Route path="/assignments" element={<AssignmentManagementPage />} />
+              {/* Super Admin System Monitoring */}
+              <Route path="/system-monitoring" element={<SystemMonitoringPage />} />
             </Route>
 
             {/* Fallback */}

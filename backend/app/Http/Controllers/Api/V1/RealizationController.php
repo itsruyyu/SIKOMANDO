@@ -18,18 +18,34 @@ class RealizationController extends Controller
     ) {}
 
     /**
-     * List realization packages for a proposal.
+     * List realization packages (for a proposal or flat across all proposals).
      */
-    public function indexPackages(Proposal $proposal): JsonResponse
+    public function indexPackages(Request $request, ?Proposal $proposal = null): JsonResponse
     {
-        $packages = RealizationPackage::where('proposal_id', $proposal->id)
-            ->with(['qrIdentity', 'items.qrIdentity'])
-            ->withCount('items')
-            ->latest()
-            ->get();
+        $this->authorize('viewAny', RealizationPackage::class);
 
-        return ApiResponse::success(
-            data: $packages,
+        $query = RealizationPackage::query()
+            ->with(['qrIdentity', 'items.qrIdentity', 'proposal.organization'])
+            ->withCount('items')
+            ->latest();
+
+        if ($proposal && $proposal->exists) {
+            $query->where('proposal_id', $proposal->id);
+        }
+
+        if ($request->user()->hasRole('PEMOHON')) {
+            $query->whereHas('proposal', fn ($q) => $q->where('applicant_id', $request->user()->id));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
+        $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
+        $packages = $query->paginate($perPage);
+
+        return ApiResponse::paginated(
+            paginator: $packages,
             message: 'Daftar paket realisasi berhasil diambil.'
         );
     }
@@ -39,6 +55,8 @@ class RealizationController extends Controller
      */
     public function storePackage(Request $request, Proposal $proposal): JsonResponse
     {
+        $this->authorize('create', [RealizationPackage::class, $proposal]);
+
         $validated = $request->validate([
             'package_name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -59,6 +77,8 @@ class RealizationController extends Controller
      */
     public function showPackage(RealizationPackage $package): JsonResponse
     {
+        $this->authorize('view', $package);
+
         return ApiResponse::success(
             data: $package->load(['proposal.organization', 'items.budgetItem', 'items.qrIdentity', 'qrIdentity', 'receipts', 'handovers']),
             message: 'Detail paket realisasi berhasil diambil.'
@@ -70,6 +90,8 @@ class RealizationController extends Controller
      */
     public function updatePackage(Request $request, RealizationPackage $package): JsonResponse
     {
+        $this->authorize('update', $package);
+
         $validated = $request->validate([
             'package_name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -90,6 +112,8 @@ class RealizationController extends Controller
      */
     public function submitPackage(Request $request, RealizationPackage $package): JsonResponse
     {
+        $this->authorize('submit', $package);
+
         $submitted = $this->realizationService->submitPackage($package, $request->user());
 
         return ApiResponse::success(
@@ -103,6 +127,8 @@ class RealizationController extends Controller
      */
     public function verifyPackage(Request $request, RealizationPackage $package): JsonResponse
     {
+        $this->authorize('verify', $package);
+
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:VERIFIED,COMPLETED'],
             'notes' => ['nullable', 'string'],
@@ -121,6 +147,8 @@ class RealizationController extends Controller
      */
     public function addItem(Request $request, RealizationPackage $package): JsonResponse
     {
+        $this->authorize('addItem', $package);
+
         $validated = $request->validate([
             'proposal_budget_item_id' => ['nullable', 'uuid'],
             'item_code' => ['nullable', 'string', 'max:50'],
@@ -154,6 +182,8 @@ class RealizationController extends Controller
      */
     public function showItem(RealizationItem $item): JsonResponse
     {
+        $this->authorize('view', $item->package);
+
         return ApiResponse::success(
             data: $item->load(['package.proposal.organization', 'budgetItem', 'qrIdentity', 'histories.recorder:id,name,email']),
             message: 'Detail barang realisasi berhasil diambil.'
@@ -165,6 +195,8 @@ class RealizationController extends Controller
      */
     public function updateItem(Request $request, RealizationItem $item): JsonResponse
     {
+        $this->authorize('update', $item->package);
+
         $validated = $request->validate([
             'item_name' => ['sometimes', 'string', 'max:255'],
             'specification' => ['nullable', 'string'],
@@ -196,6 +228,8 @@ class RealizationController extends Controller
      */
     public function inspectItem(Request $request, RealizationItem $item): JsonResponse
     {
+        $this->authorize('inspect', RealizationPackage::class);
+
         $validated = $request->validate([
             'condition' => ['required', 'string', 'in:good,damaged,lost,GOOD,DAMAGED,LOST'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],

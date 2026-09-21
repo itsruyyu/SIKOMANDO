@@ -27,6 +27,8 @@ class Receipt extends Model
         'purpose',
         'status',
         'created_by',
+        'verified_by',
+        'verified_at',
     ];
 
     protected function casts(): array
@@ -35,7 +37,13 @@ class Receipt extends Model
             'status' => ReceiptStatus::class,
             'amount' => 'decimal:2',
             'receipt_date' => 'date',
+            'verified_at' => 'datetime',
         ];
+    }
+
+    public function verifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function proposal(): BelongsTo

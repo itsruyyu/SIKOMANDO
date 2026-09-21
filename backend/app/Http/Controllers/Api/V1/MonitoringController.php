@@ -17,17 +17,33 @@ class MonitoringController extends Controller
     ) {}
 
     /**
-     * List monitoring records for a proposal.
+     * List monitoring records for a proposal or flat cross-proposal.
      */
-    public function index(Request $request, Proposal $proposal): JsonResponse
+    public function index(Request $request, ?Proposal $proposal = null): JsonResponse
     {
-        $records = $this->monitoringService->paginateForProposal(
-            proposal: $proposal,
-            perPage: (int) $request->input('per_page', 15)
-        );
+        $this->authorize('viewAny', MonitoringRecord::class);
 
-        return ApiResponse::success(
-            data: $records,
+        $query = MonitoringRecord::query()
+            ->with(['qrIdentity', 'proposal.organization', 'inspector:id,name,email'])
+            ->latest();
+
+        if ($proposal && $proposal->exists) {
+            $query->where('proposal_id', $proposal->id);
+        }
+
+        if ($request->user()->hasRole('PEMOHON')) {
+            $query->whereHas('proposal', fn ($q) => $q->where('applicant_id', $request->user()->id));
+        }
+
+        if ($request->filled('overall_result')) {
+            $query->where('overall_result', $request->string('overall_result')->toString());
+        }
+
+        $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
+        $records = $query->paginate($perPage);
+
+        return ApiResponse::paginated(
+            paginator: $records,
             message: 'Daftar rekam monitoring proposal berhasil diambil.'
         );
     }
@@ -37,6 +53,8 @@ class MonitoringController extends Controller
      */
     public function store(Request $request, Proposal $proposal): JsonResponse
     {
+        $this->authorize('create', [MonitoringRecord::class, $proposal]);
+
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
             'monitoring_date' => ['nullable', 'date'],
@@ -57,6 +75,8 @@ class MonitoringController extends Controller
      */
     public function show(MonitoringRecord $record): JsonResponse
     {
+        $this->authorize('view', $record);
+
         return ApiResponse::success(
             data: $record->load(['proposal.organization', 'inspector:id,name,email', 'items.realizationItem.qrIdentity', 'qrIdentity']),
             message: 'Detail rekam monitoring berhasil diambil.'
@@ -68,6 +88,8 @@ class MonitoringController extends Controller
      */
     public function checkItem(Request $request, MonitoringRecord $record): JsonResponse
     {
+        $this->authorize('checkItem', $record);
+
         $validated = $request->validate([
             'token' => ['nullable', 'string'],
             'realization_item_id' => ['nullable', 'uuid', 'exists:realization_items,id'],
@@ -92,6 +114,8 @@ class MonitoringController extends Controller
      */
     public function complete(Request $request, MonitoringRecord $record): JsonResponse
     {
+        $this->authorize('complete', $record);
+
         $validated = $request->validate([
             'overall_result' => ['required', 'string', 'in:SATISFACTORY,NEEDS_IMPROVEMENT,NON_COMPLIANT'],
             'notes' => ['nullable', 'string'],

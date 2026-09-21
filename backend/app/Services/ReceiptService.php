@@ -127,9 +127,18 @@ class ReceiptService
             ]);
         }
 
+        // Maker-Checker: pembuat dilarang memverifikasi kuitansinya sendiri
+        if ($receipt->created_by === $actor->id) {
+            throw ValidationException::withMessages([
+                'actor' => 'Pembuat kuitansi dilarang memverifikasi kuitansinya sendiri (Maker-Checker violation).',
+            ]);
+        }
+
         return DB::transaction(function () use ($receipt, $actor, $notes) {
             $receipt->update([
                 'status' => ReceiptStatus::VERIFIED,
+                'verified_by' => $actor->id,
+                'verified_at' => now(),
             ]);
 
             $this->auditLogService->record(
@@ -139,12 +148,13 @@ class ReceiptService
                 entityId: $receipt->id,
                 newValues: [
                     'status' => ReceiptStatus::VERIFIED->value,
+                    'verified_by' => $actor->id,
                     'notes' => $notes,
                 ],
                 actorId: $actor->id
             );
 
-            return $receipt->fresh(['proposal', 'qrIdentity']);
+            return $receipt->fresh(['proposal', 'qrIdentity', 'verifier']);
         });
     }
 

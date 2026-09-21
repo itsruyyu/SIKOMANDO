@@ -8,7 +8,7 @@ import AuditorDashboard from './AuditorDashboard';
 import AdminDashboard from './AdminDashboard';
 
 export function DashboardRouter() {
-  const { primaryRole, hasRole } = useAuth();
+  const { hasRole } = useAuth();
 
   if (hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN_SIKOMANDO)) {
     return <AdminDashboard />;
@@ -26,8 +26,6 @@ export function DashboardRouter() {
     return <InternalStaffDashboard />;
   }
 
-  // Default for applicants / general authenticated users
-  return <PemohonDashboard />;
   if (hasRole(ROLES.PEMOHON)) {
     return <PemohonDashboard />;
   }
@@ -47,4 +45,3 @@ export function DashboardRouter() {
 }
 
 export default DashboardRouter;
-

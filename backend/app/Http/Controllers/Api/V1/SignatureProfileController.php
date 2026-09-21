@@ -20,6 +20,8 @@ class SignatureProfileController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', SignatureProfile::class);
+
         $profiles = SignatureProfile::with('user:id,name,email')
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->latest()
@@ -36,11 +38,14 @@ class SignatureProfileController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', SignatureProfile::class);
+
         $validated = $request->validate([
             'user_id' => ['required', 'uuid', 'exists:users,id'],
             'name' => ['required', 'string', 'max:255'],
             'position' => ['required', 'string', 'max:255'],
             'nip' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', 'string', 'in:active,inactive,suspended'],
             'authority_level' => ['nullable', 'string', 'in:officer,head_of_division,head_of_department,regional_head'],
             'effective_start_date' => ['nullable', 'date'],
             'effective_end_date' => ['nullable', 'date', 'after_or_equal:effective_start_date'],
@@ -59,6 +64,8 @@ class SignatureProfileController extends Controller
      */
     public function show(SignatureProfile $profile): JsonResponse
     {
+        $this->authorize('view', $profile);
+
         return ApiResponse::success(
             data: $profile->load('user:id,name,email'),
             message: 'Detail profil penandatangan berhasil diambil.'
@@ -70,6 +77,8 @@ class SignatureProfileController extends Controller
      */
     public function update(Request $request, SignatureProfile $profile): JsonResponse
     {
+        $this->authorize('update', $profile);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'position' => ['sometimes', 'string', 'max:255'],
@@ -93,8 +102,12 @@ class SignatureProfileController extends Controller
      */
     public function uploadVisual(Request $request, SignatureProfile $profile): JsonResponse
     {
+        $this->authorize('uploadVisual', $profile);
+
+        // Disallow SVG to prevent embedded script execution / Stored XSS
         $request->validate([
             'signature_image' => ['required', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
+            'signature_image' => ['required', 'file', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
 
         $updated = $this->signatureService->uploadSignatureImage(

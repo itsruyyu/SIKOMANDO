@@ -173,9 +173,13 @@ class ReceiptAndHandoverTest extends TestCase
             'purpose' => 'Pembayaran Uang Muka',
             'status' => ReceiptStatus::ISSUED,
             'created_by' => $this->admin->id,
+            'status' => ReceiptStatus::DRAFT,
+            'created_by' => $this->pemohon->id,
         ]);
 
         // Update
+        // Update by pemohon
+        Sanctum::actingAs($this->pemohon);
         $updateResponse = $this->putJson("/api/v1/receipts/{$receipt->id}", [
             'amount' => 30000000,
             'description' => 'Pembayaran Uang Muka Revisi',
@@ -185,6 +189,14 @@ class ReceiptAndHandoverTest extends TestCase
             ->assertJsonPath('data.amount', '30000000.00');
 
         // Verify
+        // Creator cannot verify own receipt (maker-checker)
+        $unauthVerify = $this->postJson("/api/v1/receipts/{$receipt->id}/verify", [
+            'notes' => 'Mencoba verifikasi sendiri',
+        ]);
+        $unauthVerify->assertStatus(403);
+
+        // Verify by different authorized user (Admin)
+        Sanctum::actingAs($this->admin);
         $verifyResponse = $this->postJson("/api/v1/receipts/{$receipt->id}/verify", [
             'notes' => 'Telah dicocokkan dengan rekening koran',
         ]);
@@ -193,6 +205,7 @@ class ReceiptAndHandoverTest extends TestCase
             ->assertJsonPath('data.status', 'verified');
 
         $this->assertEquals(ReceiptStatus::VERIFIED, $receipt->fresh()->status);
+        $this->assertEquals($this->admin->id, $receipt->fresh()->verified_by);
     }
 
     public function test_cancel_receipt_revokes_qr_identity(): void

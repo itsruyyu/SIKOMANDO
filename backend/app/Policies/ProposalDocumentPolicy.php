@@ -5,12 +5,13 @@ namespace App\Policies;
 use App\Models\Proposal;
 use App\Models\ProposalDocument;
 use App\Models\User;
+use App\Support\RoleStageMap;
 
 class ProposalDocumentPolicy
 {
     public function viewAny(User $user, Proposal $proposal): bool
     {
-        if ($user->hasRole('SUPER_ADMIN')) {
+        if ($user->hasRole('SUPER_ADMIN') || $user->hasRole('ADMIN_SIKOMANDO')) {
             return true;
         }
 
@@ -23,18 +24,12 @@ class ProposalDocumentPolicy
             return true;
         }
 
-        return $user->hasAnyRole([
-            'ADMIN_SIKOMANDO',
-            'VERIFIKATOR',
-            'EVALUATOR',
-            'SURVEYOR',
-            'APPROVER',
-        ]) || $user->hasPermission('proposal.view');
+        return RoleStageMap::isProposalVisibleTo($proposal, $user);
     }
 
     public function view(User $user, ProposalDocument $document): bool
     {
-        if ($user->hasRole('SUPER_ADMIN')) {
+        if ($user->hasRole('SUPER_ADMIN') || $user->hasRole('ADMIN_SIKOMANDO')) {
             return true;
         }
 
@@ -52,13 +47,7 @@ class ProposalDocumentPolicy
             return true;
         }
 
-        return $user->hasAnyRole([
-            'ADMIN_SIKOMANDO',
-            'VERIFIKATOR',
-            'EVALUATOR',
-            'SURVEYOR',
-            'APPROVER',
-        ]) || $user->hasPermission('proposal.view');
+        return RoleStageMap::isProposalVisibleTo($proposal, $user);
     }
 
     public function create(User $user, Proposal $proposal): bool

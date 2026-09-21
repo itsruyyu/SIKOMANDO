@@ -20,6 +20,9 @@ class QrManagementController extends Controller
      */
     public function resolve(Request $request, string $token): JsonResponse
     {
+        $qrIdentity = QrIdentity::where('token', $token)->firstOrFail();
+        $this->authorize('resolve', $qrIdentity);
+
         $actor = $request->user();
         $resolved = $this->qrService->resolveToken(
             token: $token,
@@ -39,6 +42,8 @@ class QrManagementController extends Controller
      */
     public function revoke(Request $request, QrIdentity $qrIdentity): JsonResponse
     {
+        $this->authorize('manage', $qrIdentity);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);
@@ -60,6 +65,8 @@ class QrManagementController extends Controller
      */
     public function regenerate(Request $request, QrIdentity $qrIdentity): JsonResponse
     {
+        $this->authorize('manage', $qrIdentity);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);
@@ -81,13 +88,15 @@ class QrManagementController extends Controller
      */
     public function logs(Request $request, QrIdentity $qrIdentity): JsonResponse
     {
+        $this->authorize('manage', $qrIdentity);
+
         $logs = $qrIdentity->verificationLogs()
             ->with('scanner:id,name,email')
             ->latest('created_at')
             ->paginate((int) $request->input('per_page', 15));
 
-        return ApiResponse::success(
-            data: $logs,
+        return ApiResponse::paginated(
+            paginator: $logs,
             message: 'Riwayat verifikasi dan pemindaian QR berhasil diambil.'
         );
     }

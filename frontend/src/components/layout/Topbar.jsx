@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Bars3Icon, GlobeAltIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { useAuth } from '../../context/useAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth();

@@ -62,8 +62,8 @@ class FullTraceabilityE2ETest extends TestCase
         );
 
         $officialRole = Role::firstOrCreate(
-            ['code' => 'PIMPINAN'],
-            ['id' => (string) Str::uuid(), 'name' => 'Pimpinan OPD', 'is_system' => false, 'is_active' => true]
+            ['code' => 'APPROVER'],
+            ['id' => (string) Str::uuid(), 'name' => 'Approver', 'is_system' => false, 'is_active' => true]
         );
 
         $pemohonRole = Role::firstOrCreate(
@@ -124,6 +124,7 @@ class FullTraceabilityE2ETest extends TestCase
             'position' => 'Gubernur Gorontalo',
             'nip' => '196305171989031005',
             'authority_level' => 'head_of_agency',
+            'status' => 'active',
         ]);
 
         $decision = Decision::create([
@@ -196,6 +197,7 @@ class FullTraceabilityE2ETest extends TestCase
         // -------------------------------------------------------------
         // Step 3: Create & Verify Payment Receipt
         // -------------------------------------------------------------
+        Sanctum::actingAs($this->pemohon);
         $receiptResponse = $this->postJson("/api/v1/proposals/{$this->proposal->id}/receipts", [
             'realization_package_id' => $package->id,
             'amount' => 120000000,
@@ -210,6 +212,8 @@ class FullTraceabilityE2ETest extends TestCase
         $receiptQrToken = $receipt->qrIdentity->token;
 
         // Verify receipt
+        // Verify receipt by Admin (Maker-Checker: Verifier must be distinct from Creator)
+        Sanctum::actingAs($this->admin);
         $this->postJson("/api/v1/receipts/{$receiptId}/verify")->assertStatus(200);
 
         // -------------------------------------------------------------

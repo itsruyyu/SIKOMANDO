@@ -17,10 +17,12 @@ import {
   ShoppingBagIcon,
   ClipboardDocumentListIcon,
   UsersIcon,
+  UserGroupIcon,
   ShieldCheckIcon,
   QrCodeIcon,
   BellIcon,
   Cog6ToothIcon,
+  CpuChipIcon,
   ArrowLeftOnRectangleIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -73,6 +75,7 @@ export function Sidebar({ isOpen, onClose }) {
         { to: '/recommendations', label: 'Perankingan TAPD', icon: TrophyIcon, show: isApprover || isSuperAdmin || isAdmin },
         { to: '/approvals', label: 'Executive Dossier', icon: CheckBadgeIcon, show: isApprover || isSuperAdmin || isAdmin },
         { to: '/decisions', label: 'SK Penetapan Hibah', icon: DocumentArrowDownIcon, show: isApprover || isSuperAdmin || isAdmin },
+        { to: '/signatures', label: 'Tanda Tangan Digital (TTE)', icon: ShieldCheckIcon, show: isApprover || isSuperAdmin || isAdmin },
       ],
     },
     {
@@ -96,8 +99,10 @@ export function Sidebar({ isOpen, onClose }) {
       title: 'Tata Kelola Sistem',
       show: isSuperAdmin || isAdmin,
       items: [
+        { to: '/assignments', label: 'Penugasan Staf Lapangan', icon: UserGroupIcon, show: true },
         { to: '/users', label: 'Manajemen Pengguna', icon: UsersIcon, show: true },
         { to: '/policies', label: 'Kebijakan & Rubrik', icon: Cog6ToothIcon, show: true },
+        { to: '/system-monitoring', label: 'Pemantauan Sistem', icon: CpuChipIcon, show: isSuperAdmin },
       ],
     },
   ];

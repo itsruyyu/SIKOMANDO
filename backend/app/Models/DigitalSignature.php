@@ -21,10 +21,17 @@ class DigitalSignature extends Model
         'document_version_id',
         'signer_id',
         'signature_profile_id',
+        'signer_name_snapshot',
+        'signer_position_snapshot',
+        'signer_nip_snapshot',
         'signature_type',
         'status',
         'document_hash',
+        'document_disk',
+        'document_path',
         'signed_at',
+        'valid_from',
+        'valid_until',
         'rejected_at',
         'revoked_at',
         'notes',
@@ -36,6 +43,7 @@ class DigitalSignature extends Model
     protected $appends = [
         'signer_name',
         'signer_position',
+        'is_expired',
     ];
 
     protected function casts(): array
@@ -45,6 +53,8 @@ class DigitalSignature extends Model
             'status' => SignatureStatus::class,
             'metadata' => 'array',
             'signed_at' => 'datetime',
+            'valid_from' => 'datetime',
+            'valid_until' => 'datetime',
             'rejected_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];
@@ -73,11 +83,18 @@ class DigitalSignature extends Model
     public function getSignerNameAttribute(): string
     {
         return $this->profile?->name ?? $this->signer?->name ?? 'Penandatangan';
+        return $this->signer_name_snapshot ?? $this->profile?->name ?? $this->signer?->name ?? 'Penandatangan';
     }
 
     public function getSignerPositionAttribute(): string
     {
         return $this->profile?->position ?? 'Pejabat Berwenang';
+        return $this->signer_position_snapshot ?? $this->profile?->position ?? 'Pejabat Berwenang';
+    }
+
+    public function getIsExpiredAttribute(): bool
+    {
+        return $this->valid_until !== null && $this->valid_until->isPast();
     }
 
     public function isSigned(): bool

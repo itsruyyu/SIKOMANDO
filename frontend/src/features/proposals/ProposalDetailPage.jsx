@@ -14,6 +14,7 @@ import Table, { TableHead, TableBody, TableRow, TableHeaderCell, TableCell } fro
 import Spinner from '../../components/feedback/Spinner';
 import Alert from '../../components/feedback/Alert';
 import RevisionModal from './components/RevisionModal';
+import WorkflowStepper from '../../components/workflow/WorkflowStepper';
 import {
   DocumentTextIcon,
   BanknotesIcon,
@@ -243,6 +244,39 @@ export function ProposalDetailPage() {
               </Button>
             )}
 
+            {/* Contextual Workspace Buttons */}
+            {isVerifikator && proposal.status === 'verification' && (
+              <Link to={`/verifications/${proposal.id}`}>
+                <Button variant="primary" size="sm">
+                  Proses Verifikasi
+                </Button>
+              </Link>
+            )}
+
+            {isEvaluator && proposal.status === 'evaluation' && (
+              <Link to={`/evaluations/${proposal.id}`}>
+                <Button variant="primary" size="sm">
+                  Proses Evaluasi
+                </Button>
+              </Link>
+            )}
+
+            {isSurveyor && proposal.status === 'survey' && (
+              <Link to={`/field-surveys/${proposal.id}`}>
+                <Button variant="primary" size="sm">
+                  Input Hasil Survei
+                </Button>
+              </Link>
+            )}
+
+            {['disbursed', 'implementation', 'lpj_submitted'].includes(proposal.status) && (
+              <Link to={`/realizations/${proposal.id}`}>
+                <Button variant="secondary" size="sm">
+                  Realisasi Belanja
+                </Button>
+              </Link>
+            )}
+
             {/* PDF Generation */}
             <Button
               variant="outline"
@@ -261,6 +295,14 @@ export function ProposalDetailPage() {
           </div>
         }
       />
+
+      {/* Tahapan Alur Kerja Usulan Hibah */}
+      <Card className="p-4 border-slate-200 shadow-xs">
+        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+          Tahapan Progres Usulan
+        </div>
+        <WorkflowStepper currentStatus={proposal?.status} />
+      </Card>
 
       {/* Official Cryptographic QR Stamp */}
       {proposal.qr && (

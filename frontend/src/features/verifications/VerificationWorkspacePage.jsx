@@ -66,7 +66,7 @@ export function VerificationWorkspacePage() {
       if (activeVer) {
         setVerification(activeVer);
         const mappedItems = (activeVer.items || []).map((it) => {
-          let status = 'valid';
+          let status;
           const r = it.result?.value || it.result;
           if (r === 'pass') status = 'valid';
           else if (r === 'need_revision') status = 'revision_required';

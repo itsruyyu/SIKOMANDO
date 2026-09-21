@@ -90,4 +90,43 @@ class HealthCheckController extends Controller
             status: $httpCode
         );
     }
+
+    /**
+     * Extended system metrics for Super Admin monitoring dashboard.
+     */
+    public function systemMetrics(\Illuminate\Http\Request $request): JsonResponse
+    {
+        if (! $request->user()?->hasAnyRole(['SUPER_ADMIN', 'ADMIN_SIKOMANDO'])) {
+            abort(403, 'Hanya Administrator yang memiliki akses ke metrik sistem.');
+        }
+
+        $dbStart = microtime(true);
+        $pgVersion = DB::select('SELECT version()')[0]->version ?? 'PostgreSQL';
+        $dbLatency = round((microtime(true) - $dbStart) * 1000, 2);
+
+        $metrics = [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'database' => [
+                'engine' => 'PostgreSQL',
+                'version' => $pgVersion,
+                'latency_ms' => $dbLatency,
+                'status' => 'UP',
+            ],
+            'memory' => [
+                'current_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+                'peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+            ],
+            'statistics' => [
+                'total_users' => \App\Models\User::count(),
+                'total_proposals' => \App\Models\Proposal::count(),
+                'total_audit_logs' => \App\Models\AuditLog::count(),
+                'total_signatures' => \App\Models\DigitalSignature::count(),
+            ],
+            'timestamp' => now()->toISOString(),
+        ];
+
+        return ApiResponse::success($metrics, 'Metrik performa sistem berhasil diambil.');
+    }
 }
+

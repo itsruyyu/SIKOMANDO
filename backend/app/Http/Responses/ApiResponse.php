@@ -3,6 +3,7 @@
 namespace App\Http\Responses;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ApiResponse
 {
@@ -11,11 +12,29 @@ class ApiResponse
         string $message = 'Success',
         int $status = 200
     ): JsonResponse {
-        return response()->json([
+        return new JsonResponse([
             'success' => true,
             'message' => $message,
             'data' => $data,
         ], $status);
+    }
+
+    public static function paginated(
+        LengthAwarePaginator $paginator,
+        ?string $resourceClass = null,
+        string $message = 'Success'
+    ): JsonResponse {
+        $items = $resourceClass ? $resourceClass::collection($paginator->items()) : $paginator->items();
+
+        return self::success([
+            'data' => $items,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ], $message);
     }
 
     public static function created(
@@ -34,7 +53,7 @@ class ApiResponse
         int $status = 400,
         mixed $errors = null
     ): JsonResponse {
-        return response()->json([
+        return new JsonResponse([
             'success' => false,
             'message' => $message,
             'errors' => $errors,
@@ -42,7 +61,7 @@ class ApiResponse
     }
 
     public static function unauthorized(
-        string $message = 'Unauthenticated.'
+        string $message = 'Autentikasi diperlukan.'
     ): JsonResponse {
         return self::error(
             message: $message,
@@ -51,7 +70,7 @@ class ApiResponse
     }
 
     public static function forbidden(
-        string $message = 'Forbidden.'
+        string $message = 'Anda tidak memiliki izin untuk melakukan tindakan ini.'
     ): JsonResponse {
         return self::error(
             message: $message,
@@ -81,6 +100,6 @@ class ApiResponse
 
     public static function noContent(): JsonResponse
     {
-        return response()->json(null, 204);
+        return new JsonResponse(null, 204);
     }
 }

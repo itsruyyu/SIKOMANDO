@@ -27,6 +27,8 @@ class DigitalSignatureApiTest extends TestCase
 
     private User $signer;
 
+    private User $pemohon;
+
     private Decision $decision;
 
     protected function setUp(): void
@@ -46,11 +48,19 @@ class DigitalSignatureApiTest extends TestCase
             ['id' => (string) Str::uuid(), 'name' => 'Approver', 'is_system' => false, 'is_active' => true]
         );
 
+        $pemohonRole = Role::firstOrCreate(
+            ['code' => 'PEMOHON'],
+            ['id' => (string) Str::uuid(), 'name' => 'Pemohon', 'is_system' => false, 'is_active' => true]
+        );
+
         $this->admin = User::factory()->create(['name' => 'Admin SIKOMANDO']);
         $this->admin->roles()->sync([$superAdminRole->id]);
 
         $this->signer = User::factory()->create(['name' => 'Dr. H. Kepala Dinas, M.Si']);
         $this->signer->roles()->sync([$approverRole->id]);
+
+        $this->pemohon = User::factory()->create(['name' => 'Ketua Ormas']);
+        $this->pemohon->roles()->sync([$pemohonRole->id]);
 
         $grantProgram = GrantProgram::factory()->create();
         $organization = Organization::factory()->create();
@@ -83,6 +93,7 @@ class DigitalSignatureApiTest extends TestCase
             'position' => 'Kepala Dinas Komunikasi dan Informatika',
             'nip' => '197501012000031001',
             'authority_level' => 'head_of_department',
+            'status' => 'active',
         ]);
 
         $response->assertStatus(201)
@@ -108,6 +119,21 @@ class DigitalSignatureApiTest extends TestCase
                     'position' => 'Kepala Dinas Kominfo & Persandian',
                 ],
             ]);
+    }
+
+    public function test_unauthorized_user_cannot_create_profile(): void
+    {
+        Sanctum::actingAs($this->pemohon);
+
+        $response = $this->postJson('/api/v1/signatures/profiles', [
+            'user_id' => $this->pemohon->id,
+            'name' => 'Pemohon Penipu',
+            'position' => 'Gubernur Sulawesi Utara',
+            'authority_level' => 'regional_head',
+            'status' => 'active',
+        ]);
+
+        $response->assertStatus(403);
     }
 
     public function test_can_upload_visual_signature_specimen(): void
@@ -143,6 +169,7 @@ class DigitalSignatureApiTest extends TestCase
             'name' => $this->signer->name,
             'position' => 'Kepala Dinas',
             'status' => 'active',
+            'effective_start_date' => now()->toDateString(),
             'created_by' => $this->admin->id,
         ]);
 
@@ -165,6 +192,9 @@ class DigitalSignatureApiTest extends TestCase
                 'data' => [
                     'status' => SignatureStatus::PENDING_SIGNATURE->value,
                     'signer_name' => $this->signer->name,
+                    'signer' => [
+                        'name' => $this->signer->name,
+                    ],
                 ],
             ]);
 
@@ -176,10 +206,16 @@ class DigitalSignatureApiTest extends TestCase
         $pendingResponse->assertStatus(200)
             ->assertJsonFragment(['id' => $signatureId]);
 
+        // Signer views registry
+        $registryResponse = $this->getJson('/api/v1/signatures');
+        $registryResponse->assertStatus(200)
+            ->assertJsonFragment(['id' => $signatureId]);
+
         // 3. Sign document
         $signResponse = $this->postJson("/api/v1/signatures/{$signatureId}/sign", [
             'passphrase' => 'SecretPassphrase123!',
             'notes' => 'Telah diverifikasi dan disetujui sesuai regulasi.',
+            'notes' => 'Telah ditandatangani sah secara digital.',
         ]);
 
         $signResponse->assertStatus(200)
@@ -187,15 +223,31 @@ class DigitalSignatureApiTest extends TestCase
                 'success' => true,
                 'data' => [
                     'status' => SignatureStatus::SIGNED->value,
+                    'is_expired' => false,
                 ],
             ]);
 
         $signedSig = DigitalSignature::find($signatureId);
+        $signedSig = DigitalSignature::findOrFail($signatureId);
         $this->assertEquals(SignatureStatus::SIGNED, $signedSig->status);
         $this->assertNotNull($signedSig->document_hash);
         $this->assertEquals(hash('sha256', $docContent), $signedSig->document_hash);
+        $this->assertNotNull($signedSig->valid_from);
+        $this->assertNotNull($signedSig->valid_until);
 
         // Verify that QR identity was automatically created for this decision
+        // Check QR details endpoint
+        $qrResponse = $this->getJson("/api/v1/signatures/{$signatureId}/qr");
+        $qrResponse->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'is_expired' => false,
+                    'signer_name' => $profile->name,
+                ],
+            ]);
+
+        // Verify active QR is generated on the decision
         $this->assertDatabaseHas('qr_identities', [
             'qrable_type' => Decision::class,
             'qrable_id' => $this->decision->id,
@@ -203,6 +255,14 @@ class DigitalSignatureApiTest extends TestCase
         ]);
 
         // 4. Revocation of signature automatically revokes the QR identity
+        // Unauthorized user cannot revoke signature (BE-03)
+        Sanctum::actingAs($this->pemohon);
+        $unauthRevoke = $this->postJson("/api/v1/signatures/{$signatureId}/revoke", [
+            'reason' => 'Sabotase dokumen oleh pemohon.',
+        ]);
+        $unauthRevoke->assertStatus(403);
+
+        // 4. Revocation of signature by admin automatically revokes the QR identity
         Sanctum::actingAs($this->admin);
         $revokeResponse = $this->postJson("/api/v1/signatures/{$signatureId}/revoke", [
             'reason' => 'Terdapat kekeliruan lampiran data penerima.',
@@ -223,6 +283,7 @@ class DigitalSignatureApiTest extends TestCase
             'name' => $this->signer->name,
             'position' => 'Kepala Dinas',
             'status' => 'active',
+            'effective_start_date' => now()->toDateString(),
             'created_by' => $this->admin->id,
         ]);
 

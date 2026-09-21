@@ -52,6 +52,19 @@ export default function PolicyConfigurationPage() {
   // Approve / Action states
   const [actionLoading, setActionLoading] = useState({});
 
+  const handleSelectConfig = async (config) => {
+    setSelectedConfig(config);
+    setLoadingVersions(true);
+    try {
+      const res = await api.get(`/policy-configurations/${config.code}/versions`);
+      setVersions(res.data.data || res.data || []);
+    } catch (err) {
+      toast.error('Gagal memuat riwayat versi: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoadingVersions(false);
+    }
+  };
+
   const fetchConfigs = async () => {
     setLoading(true);
     try {
@@ -72,19 +85,6 @@ export default function PolicyConfigurationPage() {
     fetchConfigs();
   }, []);
 
-  const handleSelectConfig = async (config) => {
-    setSelectedConfig(config);
-    setLoadingVersions(true);
-    try {
-      const res = await api.get(`/policy-configurations/${config.code}/versions`);
-      setVersions(res.data.data || res.data || []);
-    } catch (err) {
-      toast.error('Gagal memuat riwayat versi: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setLoadingVersions(false);
-    }
-  };
-
   const handleOpenCreateDraft = () => {
     setFormError('');
     // Prefill with active or latest version data
@@ -102,7 +102,7 @@ export default function PolicyConfigurationPage() {
     e.preventDefault();
     setFormError('');
 
-    let parsedConfig = {};
+    let parsedConfig;
     try {
       parsedConfig = JSON.parse(draftData.configuration_data);
     } catch (err) {

@@ -95,7 +95,7 @@ export function UserManagementPage() {
         name: newUser.name,
         email: newUser.email,
         password: newUser.password,
-        role: newUser.role,
+
         role: selectedRole,
         roles: [selectedRole],
       });

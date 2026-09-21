@@ -5,17 +5,14 @@ import api from '../../services/api';
 import { formatDateTime } from '../../utils/formatters';
 import Card, { CardBody, CardHeader } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
 import Table, { TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '../../components/ui/Table';
 import Spinner from '../../components/feedback/Spinner';
 import EmptyState from '../../components/feedback/EmptyState';
 import {
   ShieldCheckIcon,
-  DocumentMagnifyingGlassIcon,
   QrCodeIcon,
   ClipboardDocumentCheckIcon,
   ArrowRightIcon,
-  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 
 export function AuditorDashboard() {
@@ -169,11 +166,11 @@ export function AuditorDashboard() {
               {(Array.isArray(auditLogs) ? auditLogs : []).slice(0, 8).map((log) => (
                 <TableRow key={log.id}>
                   <TableCell mono className="text-slate-500">
-                    {formatDateTime(log.created_at)}
+                    {formatDateTime(log.occurred_at || log.created_at)}
                   </TableCell>
                   <TableCell>
-                    <div className="font-bold text-slate-900">{log.user?.name || log.causer_name || 'Sistem'}</div>
-                    <div className="text-[11px] text-slate-400">{log.user?.email}</div>
+                    <div className="font-bold text-slate-900">{log.actor?.name || log.user?.name || log.causer_name || 'Sistem'}</div>
+                    <div className="text-[11px] text-slate-400">{log.actor?.email || log.user?.email || '-'}</div>
                   </TableCell>
                   <TableCell>
                     <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
@@ -181,8 +178,9 @@ export function AuditorDashboard() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs text-slate-700 capitalize">
-                      {log.auditable_type?.split('\\').pop() || log.subject_type || 'Data Usulan'}
+                    <span className="text-xs text-slate-700">
+                      {log.module ? `[${log.module}] ` : ''}
+                      {log.entity_type?.split('\\').pop() || log.auditable_type?.split('\\').pop() || 'Data Usulan'}
                     </span>
                   </TableCell>
                   <TableCell mono className="text-xs text-slate-600">
@@ -199,4 +197,3 @@ export function AuditorDashboard() {
 }
 
 export default AuditorDashboard;
-

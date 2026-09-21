@@ -16,6 +16,7 @@ class DisbursementTransaction extends Model
         'disbursement_id',
         'recorded_by',
         'transaction_number',
+        'idempotency_key',
         'transaction_type',
         'amount',
         'status',

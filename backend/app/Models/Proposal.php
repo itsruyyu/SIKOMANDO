@@ -191,4 +191,12 @@ class Proposal extends Model
     {
         return $this->hasMany(Handover::class);
     }
+
+    /**
+     * Scope a query to only include proposals visible to the given user.
+     */
+    public function scopeVisibleTo(\Illuminate\Database\Eloquent\Builder $query, User $user): \Illuminate\Database\Eloquent\Builder
+    {
+        return \App\Support\RoleStageMap::applyProposalVisibility($query, $user);
+    }
 }

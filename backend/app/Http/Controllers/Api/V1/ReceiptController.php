@@ -17,17 +17,33 @@ class ReceiptController extends Controller
     ) {}
 
     /**
-     * List receipts for a proposal.
+     * List receipts (for a proposal or flat cross-proposal).
      */
-    public function index(Proposal $proposal): JsonResponse
+    public function index(Request $request, ?Proposal $proposal = null): JsonResponse
     {
-        $receipts = Receipt::where('proposal_id', $proposal->id)
-            ->with(['qrIdentity', 'package'])
-            ->latest()
-            ->get();
+        $this->authorize('viewAny', Receipt::class);
 
-        return ApiResponse::success(
-            data: $receipts,
+        $query = Receipt::query()
+            ->with(['qrIdentity', 'package', 'proposal.organization', 'verifier:id,name'])
+            ->latest();
+
+        if ($proposal && $proposal->exists) {
+            $query->where('proposal_id', $proposal->id);
+        }
+
+        if ($request->user()->hasRole('PEMOHON')) {
+            $query->whereHas('proposal', fn ($q) => $q->where('applicant_id', $request->user()->id));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
+        }
+
+        $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
+        $receipts = $query->paginate($perPage);
+
+        return ApiResponse::paginated(
+            paginator: $receipts,
             message: 'Daftar kuitansi realisasi berhasil diambil.'
         );
     }
@@ -37,6 +53,8 @@ class ReceiptController extends Controller
      */
     public function store(Request $request, Proposal $proposal): JsonResponse
     {
+        $this->authorize('create', [Receipt::class, $proposal]);
+
         $validated = $request->validate([
             'realization_package_id' => ['nullable', 'uuid'],
             'disbursement_id' => ['nullable', 'uuid'],
@@ -61,8 +79,11 @@ class ReceiptController extends Controller
      */
     public function show(Receipt $receipt): JsonResponse
     {
+        $this->authorize('view', $receipt);
+
         return ApiResponse::success(
             data: $receipt->load(['proposal.organization', 'package', 'qrIdentity']),
+            data: $receipt->load(['proposal.organization', 'package', 'qrIdentity', 'verifier:id,name']),
             message: 'Detail kuitansi realisasi berhasil diambil.'
         );
     }
@@ -72,6 +93,8 @@ class ReceiptController extends Controller
      */
     public function update(Request $request, Receipt $receipt): JsonResponse
     {
+        $this->authorize('update', $receipt);
+
         $validated = $request->validate([
             'amount' => ['sometimes', 'numeric', 'min:1'],
             'receipt_date' => ['nullable', 'date'],
@@ -94,6 +117,8 @@ class ReceiptController extends Controller
      */
     public function verify(Request $request, Receipt $receipt): JsonResponse
     {
+        $this->authorize('verify', $receipt);
+
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
@@ -111,6 +136,8 @@ class ReceiptController extends Controller
      */
     public function cancel(Request $request, Receipt $receipt): JsonResponse
     {
+        $this->authorize('cancel', $receipt);
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);

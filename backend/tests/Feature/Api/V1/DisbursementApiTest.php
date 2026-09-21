@@ -391,8 +391,8 @@ class DisbursementApiTest extends TestCase
             'paid_amount' => 50000000,
         ]);
 
-        // Check proposal transitioned to DISBURSED
-        $this->assertEquals(ProposalStatus::DISBURSED, $proposal->fresh()->status);
+        // Check proposal transitioned to IMPLEMENTATION (BE-14: auto transition after all stages paid)
+        $this->assertEquals(ProposalStatus::IMPLEMENTATION, $proposal->fresh()->status);
 
         // Check plan is COMPLETED because all stages are paid
         $this->assertDatabaseHas('disbursement_plans', [

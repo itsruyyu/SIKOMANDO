@@ -542,12 +542,20 @@ class QrService
             return [];
         }
 
+        $isInternal = $actor->hasAnyRole(['SUPER_ADMIN', 'ADMIN_SIKOMANDO', 'AUDITOR', 'VERIFIKATOR', 'SURVEYOR']);
+
         return match ($qr->qr_type) {
             QrType::REALIZATION_ITEM => [
                 'item' => $entity->load(['package.proposal.organization', 'budgetItem', 'receipt', 'histories']),
                 'survey_findings' => method_exists($entity, 'surveyFindings') ? $entity->surveyFindings : [],
                 'monitoring_items' => method_exists($entity, 'monitoringItems') ? $entity->monitoringItems()->with('monitoringRecord')->get() : [],
             ],
+            QrType::REALIZATION_ITEM => array_filter([
+                'item' => $entity->load(['package.proposal.organization', 'budgetItem', 'receipt']),
+                'histories' => $isInternal ? $entity->histories : [],
+                'survey_findings' => ($isInternal && method_exists($entity, 'surveyFindings')) ? $entity->surveyFindings : [],
+                'monitoring_items' => ($isInternal && method_exists($entity, 'monitoringItems')) ? $entity->monitoringItems()->with('monitoringRecord')->get() : [],
+            ]),
             QrType::REALIZATION_PACKAGE => [
                 'package' => $entity->load(['proposal.organization', 'items', 'receipts', 'handovers']),
             ],
@@ -559,6 +567,12 @@ class QrService
             ],
             default => [
                 'entity' => $entity->toArray(),
+                'entity' => [
+                    'id' => $entity->id,
+                    'title' => $entity->title ?? $entity->name ?? 'Dokumen Resmi',
+                    'status' => $entity->status?->value ?? (string) ($entity->status ?? ''),
+                    'created_at' => $entity->created_at?->toISOString(),
+                ],
             ],
         };
     }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Enums\ProposalStatus;
 use App\Enums\QrType;
 use App\Enums\RealizationItemCondition;
 use App\Enums\RealizationItemStatus;
@@ -72,6 +73,7 @@ class RealizationAndItemTraceabilityTest extends TestCase
             'organization_id' => $organization->id,
             'applicant_id' => $this->pemohon->id,
             'title' => 'Pengadaan Sarana Produksi Ternak',
+            'status' => ProposalStatus::IMPLEMENTATION,
         ]);
 
         $this->budgetItem = ProposalBudgetItem::create([

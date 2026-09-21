@@ -81,6 +81,11 @@ Route::prefix('v1')->group(function () {
     // Health Check Endpoint
     Route::get('/health', [HealthCheckController::class, 'check'])->name('v1.health');
 
+    // Signed temporary download URL (zero-token query parameter exposure)
+    Route::get('/pdf/signed/{type}/{id}', [PdfDocumentController::class, 'downloadSigned'])
+        ->name('pdf.signed')
+        ->middleware(['signed', 'throttle:pdf']);
+
     Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
         Route::get('/auth/me', [
             AuthController::class,
@@ -90,6 +95,26 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [
             AuthController::class,
             'logout',
+        ]);
+
+        Route::post('/auth/logout-all', [
+            AuthController::class,
+            'logoutAll',
+        ]);
+
+        Route::get('/auth/sessions', [
+            AuthController::class,
+            'sessions',
+        ]);
+
+        Route::delete('/auth/sessions/{id}', [
+            AuthController::class,
+            'revokeSession',
+        ]);
+
+        Route::post('/auth/change-password', [
+            AuthController::class,
+            'changePassword',
         ]);
 
         Route::get('/proposals', [
@@ -428,6 +453,7 @@ Route::prefix('v1')->group(function () {
             ->group(function () {
                 Route::get('/', 'index')->name('assignments.index');
                 Route::get('/my', 'myAssignments')->name('assignments.my');
+                Route::get('/my-workload', 'myWorkload')->name('assignments.my-workload');
                 Route::get('/workload', 'workload')->name('assignments.workload');
                 Route::post('/', 'store')->name('assignments.store');
                 Route::get('/{assignment}', 'show')->name('assignments.show');
@@ -450,6 +476,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('pdf')
             ->controller(PdfDocumentController::class)
             ->group(function () {
+                Route::post('/signed-url', 'issueSignedUrl')->name('pdf.signed-url');
                 Route::get('/proposals/{proposal}', 'generateProposalPdf')->name('pdf.proposal');
                 Route::get('/proposals/{proposal}/verifications/{verification}', 'generateVerificationPdf')->name('pdf.verification');
                 Route::get('/proposals/{proposal}/evaluations/{evaluation}', 'generateEvaluationPdf')->name('pdf.evaluation');
@@ -466,6 +493,9 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', 'index')->name('internal.audit-logs.index');
                 Route::get('/{auditLog}', 'show')->name('internal.audit-logs.show');
             });
+
+        // System Monitoring Metrics
+        Route::get('/system/metrics', [HealthCheckController::class, 'systemMetrics'])->name('system.metrics');
 
         // Policy & Configuration Governance
         Route::prefix('policy-configurations')
@@ -494,18 +524,32 @@ Route::prefix('v1')->group(function () {
             Route::put('/{profile}', 'update')->name('signatures.profiles.update');
             Route::post('/{profile}/visual', 'uploadVisual')->name('signatures.profiles.visual');
         });
+        // Signature Profiles (Admin only)
+        Route::prefix('signatures/profiles')
+            ->middleware('role:SUPER_ADMIN,ADMIN_SIKOMANDO')
+            ->controller(SignatureProfileController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('signatures.profiles.index');
+                Route::post('/', 'store')->name('signatures.profiles.store');
+                Route::get('/{profile}', 'show')->name('signatures.profiles.show');
+                Route::put('/{profile}', 'update')->name('signatures.profiles.update');
+                Route::post('/{profile}/visual', 'uploadVisual')->name('signatures.profiles.visual');
+            });
 
         // Digital Signatures
         Route::prefix('signatures')->controller(DigitalSignatureController::class)->group(function () {
+            Route::get('/', 'index')->name('signatures.index');
             Route::get('/pending', 'pending')->name('signatures.pending');
             Route::post('/request', 'requestSignature')->name('signatures.request');
             Route::get('/{signature}', 'show')->name('signatures.show');
             Route::post('/{signature}/sign', 'sign')->name('signatures.sign');
             Route::post('/{signature}/reject', 'reject')->name('signatures.reject');
             Route::post('/{signature}/revoke', 'revoke')->name('signatures.revoke');
+            Route::get('/{signature}/qr', 'qr')->name('signatures.qr');
         });
 
         // Realization Packages & Items
+        Route::get('/realizations', [RealizationController::class, 'indexPackages'])->name('realizations.index');
         Route::get('/proposals/{proposal}/realizations', [RealizationController::class, 'indexPackages'])->name('proposals.realizations.index');
         Route::post('/proposals/{proposal}/realizations', [RealizationController::class, 'storePackage'])->name('proposals.realizations.store');
         Route::prefix('realization-packages')->controller(RealizationController::class)->group(function () {
@@ -522,6 +566,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Realization Receipts
+        Route::get('/receipts', [ReceiptController::class, 'index'])->name('receipts.index');
         Route::get('/proposals/{proposal}/receipts', [ReceiptController::class, 'index'])->name('proposals.receipts.index');
         Route::post('/proposals/{proposal}/receipts', [ReceiptController::class, 'store'])->name('proposals.receipts.store');
         Route::prefix('receipts')->controller(ReceiptController::class)->group(function () {
@@ -532,6 +577,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Handovers (BAST)
+        Route::get('/handovers', [HandoverController::class, 'index'])->name('handovers.index');
         Route::get('/realization-packages/{package}/handovers', [HandoverController::class, 'index'])->name('realization-packages.handovers.index');
         Route::post('/realization-packages/{package}/handovers', [HandoverController::class, 'store'])->name('realization-packages.handovers.store');
         Route::prefix('handovers')->controller(HandoverController::class)->group(function () {
@@ -542,6 +588,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Monitoring Records & Verification
+        Route::get('/monitoring-records', [MonitoringController::class, 'index'])->name('monitoring.index');
         Route::get('/proposals/{proposal}/monitoring-records', [MonitoringController::class, 'index'])->name('proposals.monitoring.index');
         Route::post('/proposals/{proposal}/monitoring-records', [MonitoringController::class, 'store'])->name('proposals.monitoring.store');
         Route::prefix('monitoring-records')->controller(MonitoringController::class)->group(function () {

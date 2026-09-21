@@ -171,4 +171,25 @@ class AssignmentController extends Controller
             'Statistik beban kerja berhasil diambil.'
         );
     }
+
+    /**
+     * Get workload statistics for authenticated user.
+     */
+    public function myWorkload(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+
+        $stats = [
+            'total' => ProposalAssignment::where('assigned_user_id', $userId)->count(),
+            'assigned' => ProposalAssignment::where('assigned_user_id', $userId)->where('status', \App\Enums\AssignmentStatus::ASSIGNED->value)->count(),
+            'in_progress' => ProposalAssignment::where('assigned_user_id', $userId)->where('status', \App\Enums\AssignmentStatus::IN_PROGRESS->value)->count(),
+            'completed' => ProposalAssignment::where('assigned_user_id', $userId)->where('status', \App\Enums\AssignmentStatus::COMPLETED->value)->count(),
+        ];
+
+        return ApiResponse::success(
+            $stats,
+            'Statistik beban kerja saya berhasil diambil.'
+        );
+    }
 }
+

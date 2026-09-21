@@ -9,6 +9,22 @@ class ProposalPolicy
 {
     public function viewAny(User $user): bool
     {
+        if ($user->hasRole('SUPER_ADMIN')) {
+            return true;
+        }
+
+        if ($user->hasAnyRole([
+            'ADMIN_SIKOMANDO',
+            'PEMOHON',
+            'VERIFIKATOR',
+            'EVALUATOR',
+            'SURVEYOR',
+            'APPROVER',
+            'AUDITOR',
+        ])) {
+            return true;
+        }
+
         return $user->hasPermission('proposal.viewAny');
     }
 
@@ -22,7 +38,7 @@ class ProposalPolicy
             return $proposal->applicant_id === $user->id;
         }
 
-        return $user->hasPermission('proposal.view');
+        return \App\Support\RoleStageMap::isProposalVisibleTo($proposal, $user);
     }
 
     public function create(User $user): bool

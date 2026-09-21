@@ -12,7 +12,7 @@ export function Badge({
   dot = false,
   className = '',
 }) {
-  let badgeStyle = 'bg-slate-100 text-slate-700 border-slate-200';
+  let badgeStyle;
   let label = children;
 
   if (status) {
@@ -52,4 +52,3 @@ export function Badge({
 }
 
 export default Badge;
-
